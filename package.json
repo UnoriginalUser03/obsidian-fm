@@ -1,7 +1,7 @@
 {
   "name": "obsidian-fm",
   "version": "1.0.0",
-  "description": "Control playback of sounds from Kenku FM soundboards.",
+  "description": "Control playback of sounds and music from Kenku FM.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
@@ -13,7 +13,7 @@
     "kenku-fm",
     "obsidian-plugin"
   ],
-  "author": "ratokuzmanic",
+  "author": "UnoriginalBeing03",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^16.11.6",
