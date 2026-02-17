@@ -36,5 +36,8 @@
   "bugs": {
     "url": "https://github.com/UnoriginalUser03/obsidian-fm/issues"
   },
-  "homepage": "https://github.com/UnoriginalUser03/obsidian-fm#readme"
+  "homepage": "https://github.com/UnoriginalUser03/obsidian-fm#readme",
+  "dependencies": {
+    "@popperjs/core": "^2.11.8"
+  }
 }

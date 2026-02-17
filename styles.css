@@ -1,0 +1,135 @@
+.kenku-suggest-popup {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  box-shadow: var(--shadow-l);
+  max-height: 240px;
+  overflow-y: auto;
+  display: none;
+  z-index: 9999;
+}
+
+.kenku-suggest-row {
+  padding: 6px 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+
+button.kenku-inline-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+
+  padding: 0.35em 0.75em;
+  margin: 0.15em 0;
+
+  border-radius: var(--radius-s);
+  border: 1px solid var(--background-modifier-border);
+
+  background: var(--background-secondary);
+  color: var(--text-normal);
+
+  font-size: var(--font-ui-small);
+  font-weight: 500;
+
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+/* Hover feels like Obsidian buttons */
+button.kenku-inline-btn:hover {
+  background: var(--background-modifier-hover);
+  border-color: var(--background-modifier-border-hover);
+}
+
+/* Pressed */
+button.kenku-inline-btn:active {
+  background: var(--background-modifier-active);
+}
+
+/* Keyboard focus */
+button.kenku-inline-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--interactive-accent);
+}
+
+.kenku-inline-icon {
+  width: 1em;
+  height: 1em;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: var(--text-muted);
+}
+
+.kenku-inline-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+
+/* ============================= */
+/* Active / Playing State        */
+/* ============================= */
+
+button.kenku-inline-btn.is-playing {
+  border-color: var(--interactive-accent);
+  background: var(--background-secondary-alt);
+}
+
+/* Icon becomes accent-colored too */
+button.kenku-inline-btn.is-playing .kenku-inline-icon {
+  color: var(--interactive-accent);
+}
+
+
+
+.kenku-suggest-row:hover,
+.kenku-suggest-row.is-selected {
+  background: var(--background-modifier-hover);
+}
+
+.kenku-suggest-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kenku-suggest-highlight {
+    color: var(--text-accent);
+    font-weight: 600;
+}
+
+.kenku-suggest-preview {
+  margin-left: auto;
+  opacity: 0.7;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.kenku-suggest-preview:hover {
+  opacity: 1;
+}
+
+.kenku-suggest-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  opacity: 0.8;
+}
+
+.kenku-suggest-label {
+  font-weight: 500;
+}
+
+.kenku-suggest-subtitle {
+  font-size: 0.8em;
+  opacity: 0.6;
+  margin-left: 22px;
+}

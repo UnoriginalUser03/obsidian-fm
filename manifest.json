@@ -1,10 +1,10 @@
 {
-  "id": "kenku-fm-soundboards",
-  "name": "Kenku FM Soundboards",
-  "version": "1.0.2",
+  "id": "obsidian-fm",
+  "name": "Obsidian FM",
+  "version": "1.0.0",
   "minAppVersion": "0.15.0",
-  "description": "Control playback of sounds from Kenku FM soundboards.",
-  "author": "ratokuzmanic",
-  "authorUrl": "https://github.com/ratokuzmanic",
+  "description": "Control playback of sounds and music from Kenku FM in Obsidian.",
+  "author": "UnoriginalUser03",
+  "authorUrl": "https://github.com/UnoriginalUser03/",
   "isDesktopOnly": false
 }

@@ -9,6 +9,12 @@ export interface Sound {
   isPlaying: boolean;
 }
 
+export interface Track {
+  id: string;
+  title: string;
+  playlistName: string;
+}
+
 export interface SoundboardApiResponse {
   soundboards: [
     {
@@ -31,7 +37,7 @@ export interface SoundboardApiResponse {
   ];
 }
 
-export interface PlaybackApiResponse {
+export interface SoundboardPlaybackApiResponse {
   sounds: [
     {
       id: string;
@@ -41,6 +47,43 @@ export interface PlaybackApiResponse {
       volume: number;
       fadeIn: number;
       fadeOut: number;
+    }
+  ];
+}
+
+export interface PlaylistPlaybackApiResponse {
+  playing: boolean;
+  volume: number;
+  muted: boolean;
+  shuffle: boolean;
+  repeat: string;
+  track: {
+    id: string;
+    url: string;
+    title: string;
+    duration: number;
+    progress: number;
+  }
+  playlist: {
+    id: string;
+    title: string;
+  }
+}
+
+export interface PlaylistApiResponse { 
+  playlists: [
+    {
+      id: string;
+      tracks: string[];
+      background: string;
+      title: string;
+    }
+  ];
+  tracks: [
+    {
+      id: string;
+      url: string;
+      title: string;
     }
   ];
 }
