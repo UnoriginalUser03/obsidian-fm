@@ -1,6 +1,6 @@
 {
-  "name": "kenku-fm-soundboards",
-  "version": "1.0.2",
+  "name": "obsidian-fm",
+  "version": "1.0.0",
   "description": "Control playback of sounds from Kenku FM soundboards.",
   "main": "main.js",
   "scripts": {
@@ -28,5 +28,13 @@
     "singleQuote": true,
     "arrowParens": "avoid",
     "trailingComma": "none"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/UnoriginalUser03/obsidian-fm.git"
+  },
+  "bugs": {
+    "url": "https://github.com/UnoriginalUser03/obsidian-fm/issues"
+  },
+  "homepage": "https://github.com/UnoriginalUser03/obsidian-fm#readme"
 }
