@@ -1,16 +1,16 @@
 import { App, Modal, Setting, Notice } from "obsidian";
-import type KenkuFmSoundboardsPlugin from "../main";
-import { KenkuSuggest, SuggestItem } from "./autocomplete";
-import { previewItem, stopPreview } from "src/kenku";
+import type ObsidianFMPlugin from "../main";
+import { Autocomplete, SuggestItem } from "./autocomplete";
+import { playSound, stopSound } from "src/api/kenku";
 
-export class KenkuInsertModal extends Modal {
-  plugin: KenkuFmSoundboardsPlugin;
-  onSubmit: (result: { title: string; trackId: string, trackType: "track" | "sound" | "playlist"  | null }) => void;
+export class ObsidianFMInsert extends Modal {
+  plugin: ObsidianFMPlugin;
+  onSubmit: (result: { title: string; trackId: string, type: "track" | "sound" | "playlist" | null }) => void;
 
   constructor(
     app: App,
-    plugin: KenkuFmSoundboardsPlugin,
-    onSubmit: (result: { title: string; trackId: string, trackType: "track" | "sound" | "playlist" | null }) => void
+    plugin: ObsidianFMPlugin,
+    onSubmit: (result: { title: string; trackId: string, type: "track" | "sound" | "playlist" | null }) => void
   ) {
     super(app);
     this.plugin = plugin;
@@ -24,7 +24,7 @@ export class KenkuInsertModal extends Modal {
     let selectedTrack: string | null = null;
     let selectedTrackType: "track" | "sound" | "playlist" | null = null;
 
-    contentEl.createEl("h2", { text: "Insert KenkuFM Player" });
+    contentEl.createEl("h2", { text: "Insert ObsidianFM Player" });
     // Search field
     const searchSetting = new Setting(contentEl)
       .setName("Search")
@@ -42,13 +42,20 @@ export class KenkuInsertModal extends Modal {
           ...this.plugin.sounds.map(s => ({
             id: s.id,
             label: s.title,
-            icon: "volume-2",
+            icon: "audio-lines",
             subtitle: s.soundboardName,
             type: "sound" as const,
           })),
+          ...this.plugin.playlists.map(p => ({
+            id: p.id,
+            label: p.title,
+            icon: "list-music",
+            subtitle: "Playlist",
+            type: "playlist" as const,
+          }))
         ];
 
-        new KenkuSuggest(
+        new Autocomplete(
           this.app,
           text.inputEl,
           items,
@@ -58,10 +65,10 @@ export class KenkuInsertModal extends Modal {
             selectedTrackType = item.type;
           },
           (id, type) => {
-            previewItem(this.plugin.settings.baseUrl, id, type);
+            playSound(this.plugin.settings.baseUrl, id, type);
           },
           (type, id) => {
-            stopPreview(
+            stopSound(
               this.plugin.settings.baseUrl,
               type,
               id
@@ -69,6 +76,8 @@ export class KenkuInsertModal extends Modal {
           }
         );
       });
+
+    contentEl.createEl("h3", { text: "Playback Settings" });
 
     // Insert button — moved OUTSIDE the search field callback
     new Setting(contentEl)
@@ -82,7 +91,7 @@ export class KenkuInsertModal extends Modal {
             }
 
             this.close();
-            this.onSubmit({ title, trackId: selectedTrack, trackType: selectedTrackType });
+            this.onSubmit({ title, trackId: selectedTrack, type: selectedTrackType });
           });
       });
   }

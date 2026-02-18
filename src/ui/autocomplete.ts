@@ -15,7 +15,7 @@ type FilteredEntry = {
     matches: SearchMatches;
 };
 
-export class KenkuSuggest {
+export class Autocomplete {
     private app: App;
     private inputEl: HTMLInputElement;
     private popupEl: HTMLElement;
@@ -58,16 +58,13 @@ export class KenkuSuggest {
         this.previewCallback = onPreview;
         this.stopPreviewCallback = onStopPreview;
 
-        this.popupEl = createDiv({ cls: "kenku-suggest-popup" });
-        this.listEl = this.popupEl.createDiv({ cls: "kenku-suggest-list" });
+        this.popupEl = createDiv({ cls: "obsidianfm-suggest-popup" });
+        this.listEl = this.popupEl.createDiv({ cls: "obsidianfm-suggest-list" });
         document.body.appendChild(this.popupEl);
 
         this.registerEvents();
     }
 
-    // -----------------------------------------------------
-    // EVENT HANDLING
-    // -----------------------------------------------------
     private registerEvents() {
         this.inputEl.addEventListener("input", () => {
             this.update(this.inputEl.value);
@@ -117,9 +114,6 @@ export class KenkuSuggest {
         });
     }
 
-    // -----------------------------------------------------
-    // UPDATE + FUZZY SEARCH
-    // -----------------------------------------------------
     private update(query: string) {
         if (!query) {
             this.filtered = [];
@@ -154,9 +148,6 @@ export class KenkuSuggest {
         this.open();
     }
 
-    // -----------------------------------------------------
-    // RENDER POPUP
-    // -----------------------------------------------------
     private render() {
         this.listEl.empty();
 
@@ -164,22 +155,22 @@ export class KenkuSuggest {
             const { item, matches } = entry;
 
             const row = this.listEl.createDiv({
-                cls: "kenku-suggest-row",
+                cls: "obsidianfm-suggest-row",
             });
 
-            const top = row.createDiv({ cls: "kenku-suggest-top" });
+            const top = row.createDiv({ cls: "obsidianfm-suggest-top" });
 
             if (item.icon) {
-                const iconEl = top.createDiv({ cls: "kenku-suggest-icon" });
+                const iconEl = top.createDiv({ cls: "obsidianfm-suggest-icon" });
                 setIcon(iconEl, item.icon);
             }
 
-            const labelEl = top.createSpan({ cls: "kenku-suggest-label" });
+            const labelEl = top.createSpan({ cls: "obsidianfm-suggest-label" });
             labelEl.append(this.highlight(item.label, matches));
 
             const isPreviewing = this.currentPreview === item.id;
             const previewBtn = top.createDiv({
-                cls: "kenku-suggest-preview",
+                cls: "obsidianfm-suggest-preview",
             });
 
             setIcon(previewBtn, isPreviewing ? "square" : "play");
@@ -193,7 +184,7 @@ export class KenkuSuggest {
             if (item.subtitle) {
                 row.createDiv({
                     text: item.subtitle,
-                    cls: "kenku-suggest-subtitle",
+                    cls: "obsidianfm-suggest-subtitle",
                 });
             }
 
@@ -216,9 +207,6 @@ export class KenkuSuggest {
         });
     }
 
-    // -----------------------------------------------------
-    // POPUP CONTROL
-    // -----------------------------------------------------
     private open() {
         if (this.isOpen) {
             this.popper?.update();
@@ -258,9 +246,6 @@ export class KenkuSuggest {
         this.close();
     }
 
-    // -----------------------------------------------------
-    // PREVIEW LOGIC
-    // -----------------------------------------------------
     private togglePreview(entry: FilteredEntry, _btn: HTMLElement) {
         const { id, type } = entry.item;
 
@@ -290,9 +275,6 @@ export class KenkuSuggest {
         this.currentPreview = null;
     }
 
-    // -----------------------------------------------------
-    // HIGHLIGHTING
-    // -----------------------------------------------------
     private highlight(label: string, matches: SearchMatches): DocumentFragment {
         const frag = document.createDocumentFragment();
         let lastIndex = 0;
@@ -303,7 +285,7 @@ export class KenkuSuggest {
             }
 
             const span = document.createElement("span");
-            span.className = "kenku-suggest-highlight";
+            span.className = "obsidianfm-suggest-highlight";
             span.textContent = label.slice(start, end);
             frag.append(span);
 

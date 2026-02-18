@@ -1,4 +1,4 @@
-.kenku-suggest-popup {
+.obsidianfm-suggest-popup {
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
@@ -9,15 +9,19 @@
   z-index: 9999;
 }
 
-.kenku-suggest-row {
+.obsidianfm-suggest-row {
   padding: 6px 10px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
 }
 
+button.obsidianfm-inline-btn.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
-button.kenku-inline-btn {
+button.obsidianfm-inline-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.4em;
@@ -39,23 +43,23 @@ button.kenku-inline-btn {
 }
 
 /* Hover feels like Obsidian buttons */
-button.kenku-inline-btn:hover {
+button.obsidianfm-inline-btn:hover {
   background: var(--background-modifier-hover);
   border-color: var(--background-modifier-border-hover);
 }
 
 /* Pressed */
-button.kenku-inline-btn:active {
+button.obsidianfm-inline-btn:active {
   background: var(--background-modifier-active);
 }
 
 /* Keyboard focus */
-button.kenku-inline-btn:focus-visible {
+button.obsidianfm-inline-btn:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--interactive-accent);
 }
 
-.kenku-inline-icon {
+.obsidianfm-inline-icon {
   width: 1em;
   height: 1em;
 
@@ -66,7 +70,7 @@ button.kenku-inline-btn:focus-visible {
   color: var(--text-muted);
 }
 
-.kenku-inline-icon svg {
+.obsidianfm-inline-icon svg {
   width: 100%;
   height: 100%;
 }
@@ -76,35 +80,35 @@ button.kenku-inline-btn:focus-visible {
 /* Active / Playing State        */
 /* ============================= */
 
-button.kenku-inline-btn.is-playing {
+button.obsidianfm-inline-btn.is-playing {
   border-color: var(--interactive-accent);
   background: var(--background-secondary-alt);
 }
 
 /* Icon becomes accent-colored too */
-button.kenku-inline-btn.is-playing .kenku-inline-icon {
+button.obsidianfm-inline-btn.is-playing .obsidianfm-inline-icon {
   color: var(--interactive-accent);
 }
 
 
 
-.kenku-suggest-row:hover,
-.kenku-suggest-row.is-selected {
+.obsidianfm-suggest-row:hover,
+.obsidianfm-suggest-row.is-selected {
   background: var(--background-modifier-hover);
 }
 
-.kenku-suggest-top {
+.obsidianfm-suggest-top {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.kenku-suggest-highlight {
-    color: var(--text-accent);
-    font-weight: 600;
+.obsidianfm-suggest-highlight {
+  color: var(--text-accent);
+  font-weight: 600;
 }
 
-.kenku-suggest-preview {
+.obsidianfm-suggest-preview {
   margin-left: auto;
   opacity: 0.7;
   cursor: pointer;
@@ -112,11 +116,11 @@ button.kenku-inline-btn.is-playing .kenku-inline-icon {
   align-items: center;
 }
 
-.kenku-suggest-preview:hover {
+.obsidianfm-suggest-preview:hover {
   opacity: 1;
 }
 
-.kenku-suggest-icon {
+.obsidianfm-suggest-icon {
   width: 16px;
   height: 16px;
   display: flex;
@@ -124,12 +128,338 @@ button.kenku-inline-btn.is-playing .kenku-inline-icon {
   opacity: 0.8;
 }
 
-.kenku-suggest-label {
+.obsidianfm-suggest-label {
   font-weight: 500;
 }
 
-.kenku-suggest-subtitle {
+.obsidianfm-suggest-subtitle {
   font-size: 0.8em;
   opacity: 0.6;
   margin-left: 22px;
+}
+
+button.obsidianfm-inline-btn.is-paused {
+  border-color: var(--interactive-accent);
+  background: var(--background-secondary-alt);
+  opacity: 0.75;
+  /* slightly muted compared to playing */
+}
+
+/* Icon gets accent color but semi-muted */
+button.obsidianfm-inline-btn.is-paused .obsidianfm-inline-icon {
+  color: var(--interactive-accent);
+  opacity: 0.7;
+}
+
+/* Optional: hover effect for paused buttons */
+button.obsidianfm-inline-btn.is-paused:hover {
+  background: var(--background-modifier-hover);
+  opacity: 0.85;
+}
+
+/* ============================= */
+/* Main Player Layout            */
+/* ============================= */
+
+.obsidianfm-player-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  padding: 14px;
+  gap: 14px;
+}
+
+
+/* ============================= */
+/* Header Row (Title + Volume)   */
+/* ============================= */
+
+.obsidianfm-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  width: 100%;
+  gap: 16px;
+}
+
+/* Track + Playlist Info (Left) */
+.obsidianfm-now-playing-info {
+  flex: 1;
+  min-width: 0;
+  transition: opacity 0.2s ease;
+  text-align: left;
+}
+
+.obsidianfm-track-title {
+  font-weight: 600;
+  font-size: 1.15em;
+}
+
+.obsidianfm-playlist-name {
+  font-size: 0.9em;
+  opacity: 0.7;
+}
+
+/* Prevent overflow */
+.obsidianfm-track-title,
+.obsidianfm-playlist-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+
+/* ============================= */
+/* Volume Controls (Right Side)  */
+/* ============================= */
+
+.obsidianfm-volume-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  flex-shrink: 0;
+}
+
+/* Mute Button */
+.obsidianfm-mute-btn {
+  width: 46px;
+  height: 46px;
+}
+
+.obsidianfm-mute-btn svg {
+  width: 22px;
+  height: 22px;
+  color: var(--text-muted);
+}
+
+.obsidianfm-mute-btn.is-muted svg {
+  color: var(--interactive-accent);
+}
+
+/* Hover polish */
+.obsidianfm-mute-btn:hover svg {
+  color: var(--text-normal);
+}
+
+.obsidianfm-mute-btn.is-muted:hover svg {
+  color: var(--interactive-accent-hover);
+}
+
+/* ============================= */
+/* Volume Slider                 */
+/* ============================= */
+
+.obsidianfm-volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+
+  width: 130px;
+  height: 6px;
+  border-radius: 999px;
+
+  cursor: pointer;
+
+  /* Filled track effect */
+  background: linear-gradient(to right,
+      var(--interactive-accent) 0%,
+      var(--interactive-accent) var(--volume-fill, 50%),
+      var(--background-modifier-border) var(--volume-fill, 50%),
+      var(--background-modifier-border) 100%);
+
+  transition: height 0.15s ease;
+}
+
+/* Hover slightly thicker */
+.obsidianfm-volume-slider:hover {
+  height: 7px;
+}
+
+/* Thumb */
+.obsidianfm-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+
+  background: var(--interactive-accent);
+  border: 2px solid var(--background-primary);
+
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+
+  transition: transform 0.15s ease;
+}
+
+/* Thumb hover */
+.obsidianfm-volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.obsidianfm-volume-slider:active::-webkit-slider-thumb {
+  transform: scale(1.25);
+}
+
+
+/* ============================= */
+/* Controls Row                  */
+/* ============================= */
+
+.obsidianfm-controls-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  gap: 14px;
+}
+
+/* ============================= */
+/* Unified Button Base Style     */
+/* ============================= */
+
+.obsidianfm-controls-container button,
+.obsidianfm-volume-container button {
+  border: none;
+  background: var(--background-modifier-hover);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+  border-radius: 50%;
+
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.obsidianfm-controls-container button:hover,
+.obsidianfm-volume-container button:hover {
+  background: var(--background-modifier-active);
+}
+
+.obsidianfm-inline-type-icon {
+  margin-left: auto; /* pushes it to the right */
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* Small Buttons (Shuffle/Prev/Next/Repeat) */
+.obsidianfm-prev-btn,
+.obsidianfm-next-btn,
+.obsidianfm-shuffle-btn,
+.obsidianfm-repeat-btn {
+  width: 46px;
+  height: 46px;
+
+  border-radius: 50%;
+  border: none;
+
+  background: var(--background-modifier-hover);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+  flex-shrink: 0;
+
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.obsidianfm-prev-btn:hover,
+.obsidianfm-next-btn:hover,
+.obsidianfm-shuffle-btn:hover,
+.obsidianfm-repeat-btn:hover {
+  background: var(--background-modifier-active);
+}
+
+/* Active state */
+button.obsidianfm-shuffle-btn.is-active,
+button.obsidianfm-repeat-btn.is-active {
+  color: var(--interactive-accent);
+}
+
+/* Icon size */
+.obsidianfm-prev-btn svg,
+.obsidianfm-next-btn svg,
+.obsidianfm-shuffle-btn svg,
+.obsidianfm-repeat-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+
+/* ============================= */
+/* Play/Pause Button (Center)    */
+/* ============================= */
+
+.obsidianfm-play-pause-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+
+  background: var(--interactive-accent);
+  transition: background 0.2s ease;
+}
+
+.obsidianfm-play-pause-btn:hover {
+  background: var(--interactive-accent-hover);
+}
+
+
+/* Icon inside */
+.obsidianfm-play-pause-icon {
+  width: 32px;
+  height: 32px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: var(--text-on-accent);
+}
+
+.obsidianfm-play-pause-btn svg {
+  width: 100%;
+  height: 100%;
+}
+
+
+/* ============================= */
+/* Progress Bar                  */
+/* ============================= */
+
+.obsidianfm-progress-container {
+  width: 100%;
+  height: 6px;
+
+  background: var(--background-modifier-border);
+  border-radius: 4px;
+
+  position: relative;
+}
+
+.obsidianfm-progress-bar {
+  height: 100%;
+  width: 0%;
+
+  background: var(--interactive-accent);
+  border-radius: 4px;
+
+  transition: width 0.25s linear;
+}
+
+.obsidianfm-progress-time {
+  font-size: var(--font-small);
+  opacity: 0.7;
+
+  margin-top: 4px;
+  text-align: right;
 }

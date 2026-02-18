@@ -1,4 +1,4 @@
-export interface KenkuFmSettings {
+export interface ObsidianFMSettings {
   baseUrl: string;
 }
 
@@ -7,6 +7,12 @@ export interface Sound {
   title: string;
   soundboardName: string;
   isPlaying: boolean;
+}
+
+export interface Playlist {
+  id: string;
+  title: string;
+  tracks: string[];
 }
 
 export interface Track {
@@ -51,12 +57,12 @@ export interface SoundboardPlaybackApiResponse {
   ];
 }
 
-export interface PlaylistPlaybackApiResponse {
+export interface PlaylistPlaybackStatus {
   playing: boolean;
   volume: number;
   muted: boolean;
   shuffle: boolean;
-  repeat: string;
+  repeat: "off" | "playlist" | "track";
   track: {
     id: string;
     url: string;

@@ -1,10 +1,10 @@
 import { PluginSettingTab, App, Setting } from 'obsidian';
-import KenkuFmSoundboardsPlugin from './main';
+import ObsidianFMPlugin from './main';
 
-export default class KenkuFmSettings extends PluginSettingTab {
-  plugin: KenkuFmSoundboardsPlugin;
+export default class ObsidianFMSettings extends PluginSettingTab {
+  plugin: ObsidianFMPlugin;
 
-  constructor(app: App, plugin: KenkuFmSoundboardsPlugin) {
+  constructor(app: App, plugin: ObsidianFMPlugin) {
     super(app, plugin);
     this.plugin = plugin;
   }
