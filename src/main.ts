@@ -60,7 +60,7 @@ export default class ObsidianFMPlugin extends Plugin {
   };
 
   async onload() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    await this.loadSettings();
     this.addSettingTab(new SettingsTab(this.app, this));
 
     // Core systems
@@ -242,5 +242,13 @@ export default class ObsidianFMPlugin extends Plugin {
     });
 
     this.app.workspace.revealLeaf(leaf);
+  }
+
+  async loadSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
+
+  async saveSettings() {
+    await this.saveData(this.settings);
   }
 }

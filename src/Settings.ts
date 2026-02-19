@@ -14,11 +14,15 @@ export default class ObsidianFMSettings extends PluginSettingTab {
 
     containerEl.empty();
 
-    new Setting(containerEl).setName('Base URL').addText(text =>
-      text.setValue(this.plugin.settings.baseUrl).onChange(async value => {
-        this.plugin.settings.baseUrl = value;
-        // await this.plugin.saveSettings();
-      })
-    );
+    new Setting(containerEl)
+      .setName('Base URL')
+      .addText(text =>
+        text
+          .setValue(this.plugin.settings.baseUrl)
+          .onChange(async value => {
+            this.plugin.settings.baseUrl = value;
+            await this.plugin.saveSettings();
+          })
+      );
   }
 }
