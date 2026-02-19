@@ -7,7 +7,9 @@ import {
   PlaylistPlaybackStatus,
   Track,
   Playlist,
-} from "../types";
+  Soundboard,
+  MediaType,
+} from "./types";
 
 // ---------------- SAFE PLAYLIST FETCH ----------------
 export const getPlaylists = async (baseUrl: string): Promise<Playlist[]> => {
@@ -28,6 +30,27 @@ export const getPlaylists = async (baseUrl: string): Promise<Playlist[]> => {
     return [];
   }
 };
+
+export const getSoundboards = async (baseUrl: string): Promise<Soundboard[]> => {
+  try {
+    const { json: soundboards } = (await requestUrl({
+      url: new URL("/v1/soundboard", baseUrl).href,
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    })) as { json: SoundboardApiResponse };
+
+    return soundboards.soundboards.map((sb) => ({
+      id: sb.id,
+      title: sb.title,
+      sounds: sb.sounds,
+    }));
+  } catch (e) {
+    console.warn("Could not load soundboards:", e);
+    return [];
+  }
+};
+
+// ---------------- SAFE PLAYBACK CONTROLS ---------------- 
 
 export const setVolume = async (baseUrl: string, volume: number): Promise<void> => {
   try {
@@ -99,19 +122,24 @@ export const getSounds = async (baseUrl: string): Promise<Sound[]> => {
       }),
     ]) as [{ json: SoundboardApiResponse }, { json: SoundboardPlaybackApiResponse }];
 
-    return soundboards.sounds.map((sound) => ({
-      id: sound.id,
-      title: sound.title,
-      soundboardName: soundboards.soundboards.find((sb) =>
-        sb.sounds.includes(sound.id)
-      )?.title ?? "Unknown",
-      isPlaying: playback?.sounds?.some((s) => s.id === sound.id) ?? false,
-    }));
+    return soundboards.sounds.map((sound) => {
+      const playbackSound = playback?.sounds?.find((s) => s.id === sound.id);
+      const sb = soundboards.soundboards.find((sb) => sb.sounds.includes(sound.id));
+      return {
+        id: sound.id,
+        title: sound.title,
+        soundboardName: sb?.title ?? "Unknown",
+        isPlaying: playbackSound != null,
+        loop: sound.loop,
+      };
+
+    });
   } catch (e) {
     console.warn("Could not load soundboards:", e);
     return [];
   }
 };
+
 
 // ---------------- SAFE PLAYBACK FETCH ----------------
 export const getSoundboardPlaybackIDs = async (
@@ -128,6 +156,23 @@ export const getSoundboardPlaybackIDs = async (
   } catch (e) {
     console.warn("Could not load soundboard playback:", e);
     return [];
+  }
+};
+
+export const getSoundboardPlaybackStatus = async (
+  baseUrl: string
+): Promise<SoundboardPlaybackApiResponse | null> => {
+  try {
+    const { json: playback } = (await requestUrl({
+      url: new URL("/v1/soundboard/playback", baseUrl).href,
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    })) as { json: SoundboardPlaybackApiResponse };
+
+    return playback;
+  } catch (e) {
+    console.warn("Could not load playlist playback:", e);
+    return null;
   }
 };
 
@@ -231,6 +276,23 @@ export const setSoundboardPlaybackStatus = async (
   }
 };
 
+export const setPlayback = async (
+  baseUrl: string,
+  shuffle?: boolean,
+  repeat?: "track" | "playlist" | "off",
+  volume?: number,
+): Promise<void> => {
+  try {
+    await Promise.all([
+      shuffle !== undefined ? setShuffle(baseUrl, shuffle) : Promise.resolve(),
+      repeat !== undefined ? setRepeat(baseUrl, repeat) : Promise.resolve(),
+      volume !== undefined ? setVolume(baseUrl, volume) : Promise.resolve(),
+    ]);
+  } catch (e) {
+    console.warn("Could not change playback settings:", e);
+  }
+};
+
 export const setPlaylist = async (
   baseUrl: string,
   id: string
@@ -252,7 +314,7 @@ export const setPlaylist = async (
 export const playSound = async (
   baseUrl: string,
   id: string,
-  type: "track" | "sound" | "playlist"
+  type: MediaType
 ) => {
   if (type === "track" || type === "playlist") {
     await setPlaylist(baseUrl, id);
@@ -263,7 +325,7 @@ export const playSound = async (
 
 export const stopSound = async (
   baseUrl: string,
-  type?: "track" | "sound" | "playlist",
+  type?: MediaType,
   id?: string
 ) => {
   try {
@@ -276,7 +338,6 @@ export const stopSound = async (
       await setSoundboardPlaybackStatus(baseUrl, id, false);
       return;
     }
-
     // Stop all
     await setPlaylistPlayback(baseUrl, false);
     const sounds = await getSoundboardPlaybackIDs(baseUrl);

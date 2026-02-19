@@ -1,22 +1,11 @@
 import { App, prepareFuzzySearch, SearchMatches, setIcon } from "obsidian";
 import { createPopper, Instance as PopperInstance } from "@popperjs/core";
-
-export interface SuggestItem {
-    id: string;
-    label: string;
-    icon?: string;
-    subtitle?: string;
-    type: "track" | "sound" | "playlist";
-}
-
-type FilteredEntry = {
-    item: SuggestItem;
-    score: number;
-    matches: SearchMatches;
-};
+import { FilteredEntry, MediaType, SuggestItem } from "src/api/types";
+import ObsidianFMPlugin from "src/main";
 
 export class Autocomplete {
     private app: App;
+    private plugin: ObsidianFMPlugin;
     private inputEl: HTMLInputElement;
     private popupEl: HTMLElement;
     private listEl: HTMLElement;
@@ -28,35 +17,19 @@ export class Autocomplete {
     private isOpen = false;
 
     private currentPreview: string | null = null;
-    private previewCallback?: (
-        id: string,
-        type: "track" | "sound" | "playlist"
-    ) => void;
-    private stopPreviewCallback?: (
-        type?: "track" | "sound" | "playlist",
-        id?: string
-    ) => void;
 
     constructor(
         app: App,
+        plugin: ObsidianFMPlugin,
         inputEl: HTMLInputElement,
         items: SuggestItem[],
         onSelect: (item: SuggestItem) => void,
-        onPreview?: (
-            id: string,
-            type: "track" | "sound" | "playlist"
-        ) => void,
-        onStopPreview?: (
-            type?: "track" | "sound" | "playlist",
-            id?: string
-        ) => void
     ) {
         this.app = app;
+        this.plugin = plugin;
         this.inputEl = inputEl;
         this.items = items;
         this.onSelect = onSelect;
-        this.previewCallback = onPreview;
-        this.stopPreviewCallback = onStopPreview;
 
         this.popupEl = createDiv({ cls: "obsidianfm-suggest-popup" });
         this.listEl = this.popupEl.createDiv({ cls: "obsidianfm-suggest-list" });
@@ -74,21 +47,16 @@ export class Autocomplete {
             if (!this.isOpen) return;
 
             if (evt.key === "ArrowDown") {
-                if (this.selectedIndex < this.filtered.length - 1) {
-                    this.selectedIndex++;
-                } else {
-                    this.selectedIndex = 0; // wrap
-                }
+                this.selectedIndex =
+                    (this.selectedIndex + 1) % this.filtered.length;
                 this.render();
                 evt.preventDefault();
             }
 
             if (evt.key === "ArrowUp") {
-                if (this.selectedIndex > 0) {
-                    this.selectedIndex--;
-                } else {
-                    this.selectedIndex = this.filtered.length - 1; // wrap
-                }
+                this.selectedIndex =
+                    (this.selectedIndex - 1 + this.filtered.length) %
+                    this.filtered.length;
                 this.render();
                 evt.preventDefault();
             }
@@ -175,10 +143,10 @@ export class Autocomplete {
 
             setIcon(previewBtn, isPreviewing ? "square" : "play");
 
-            previewBtn.addEventListener("mousedown", (evt) => {
+            previewBtn.addEventListener("mousedown", async (evt) => {
                 evt.preventDefault();
                 evt.stopImmediatePropagation();
-                this.togglePreview(entry, previewBtn);
+                await this.togglePreview(entry);
             });
 
             if (item.subtitle) {
@@ -193,9 +161,9 @@ export class Autocomplete {
                 row.scrollIntoView({ block: "nearest" });
             }
 
-            row.addEventListener("mousedown", (evt) => {
+            row.addEventListener("mousedown", async (evt) => {
                 evt.preventDefault();
-                this.choose(item);
+                await this.choose(item);
             });
 
             row.addEventListener("mouseenter", () => {
@@ -222,14 +190,23 @@ export class Autocomplete {
                 { name: "offset", options: { offset: [0, 6] } },
                 { name: "flip", options: { fallbackPlacements: ["top-start"] } },
                 { name: "preventOverflow", options: { padding: 8 } },
+                {
+                    name: "sameWidth",
+                    enabled: true,
+                    phase: "beforeWrite",
+                    requires: ["computeStyles"],
+                    fn({ state }) {
+                        state.styles.popper.width = `${state.rects.reference.width}px`;
+                    },
+                },
             ],
         });
     }
 
-    private close() {
+    public async close() {
         if (!this.isOpen) return;
 
-        this.stopPreview();
+        await this.stopPreview();
 
         this.isOpen = false;
         this.popupEl.style.display = "none";
@@ -240,37 +217,43 @@ export class Autocomplete {
         }
     }
 
-    private choose(item: SuggestItem) {
+    private async choose(item: SuggestItem) {
         this.inputEl.value = item.label;
         this.onSelect(item);
-        this.close();
+        await this.close();
     }
-
-    private togglePreview(entry: FilteredEntry, _btn: HTMLElement) {
+    private async togglePreview(entry: FilteredEntry) {
         const { id, type } = entry.item;
+        const ctrl = this.plugin.playbackController;
 
-        // If clicking the same item → stop preview
+        // If clicking the same item → stop preview and restore snapshot
         if (this.currentPreview === id) {
-            this.stopPreviewCallback?.(type, id);
+            ctrl.suppressRestore = false;
+            await ctrl.exitPreviewMode();
             this.currentPreview = null;
             this.render();
             return;
         }
 
-        // Stop any existing preview (fallback: stop everything)
+        // Switching from one preview to another → DO NOT restore snapshot
         if (this.currentPreview) {
-            this.stopPreviewCallback?.();
+            ctrl.suppressRestore = true;
+            await ctrl.exitPreviewMode();
         }
 
+        // Start new preview
+        ctrl.suppressRestore = false;
         this.currentPreview = id;
-        this.previewCallback?.(id, type);
+        await ctrl.enterPreviewMode(id, type);
 
         this.render();
     }
 
-    private stopPreview() {
-        if (this.currentPreview && this.stopPreviewCallback) {
-            this.stopPreviewCallback();
+    private async stopPreview() {
+        if (this.currentPreview) {
+            const ctrl = this.plugin.playbackController;
+            ctrl.suppressRestore = false;
+            await ctrl.exitPreviewMode();
         }
         this.currentPreview = null;
     }

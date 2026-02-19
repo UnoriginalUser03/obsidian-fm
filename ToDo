@@ -1,10 +1,8 @@
-+ Add playback scrubber window to manage sounds 
-+ Add shuffle options and loop options for playback
 + Add loop options/fade in and fade out in modal. (Create under params)
 + Add memory for previous playing track with preview playback (STRETCH)
-+ Add library browser to play tracks that aren't inline  
- * Fix duplicate tracks highlighting at same time 
-
++ Add SFX stacks option to play multiple in group at once inline. 
++ Add Playback start options, have song loop multiple times
++ Add custom playlists support from obsidian
 
  Soundboard sounds update whether they are playing or not regardless of if they were 
  triggered by Obsidian or not. Get Music and Playlists to behave the same way -> 

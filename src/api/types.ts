@@ -1,3 +1,5 @@
+import { SearchMatches } from "obsidian";
+
 export interface ObsidianFMSettings {
   baseUrl: string;
 }
@@ -7,6 +9,13 @@ export interface Sound {
   title: string;
   soundboardName: string;
   isPlaying: boolean;
+  loop: boolean;
+}
+
+export interface Soundboard {
+  id: string;
+  title: string;
+  sounds: string[];
 }
 
 export interface Playlist {
@@ -53,8 +62,52 @@ export interface SoundboardPlaybackApiResponse {
       volume: number;
       fadeIn: number;
       fadeOut: number;
+      duration: number; // in seconds
+      progress: number; // in seconds
     }
   ];
+}
+
+export interface SuggestItem {
+  id: string;
+  label: string;
+  icon?: string;
+  subtitle?: string;
+  type: MediaType;
+}
+
+export type FilteredEntry = {
+    item: SuggestItem;
+    score: number;
+    matches: SearchMatches;
+};
+
+export type InsertMode = "normal" | "soundscape";
+
+export type RepeatMode = "off" | "playlist" | "track";
+
+export type MediaType = "track" | "sound" | "playlist" | "soundboard" | "soundscape" | null;
+
+export interface PlaybackSnapshot {
+  paused: boolean;
+  track: string | null;      // track IDs currently playing
+  sounds: string[];      // sound IDs currently playing
+  playlistID: string | null;   // playlist IDs currently playing
+  soundscapeID: string | null; // active soundscape IDs (usually 0 or 1)
+}
+
+export interface InsertResult {
+  title?: string;
+  trackId?: string;
+  type?: MediaType;
+  stack?: { id: string; label: string }[];
+  overrideSettings?: boolean;
+  repeat?: "off" | "playlist" | "track" | "default";
+  shuffle?: boolean;
+  random?: boolean;
+  overlapping?: boolean;
+  playOnce?: boolean;
+  volume?: number;
 }
 
 export interface PlaylistPlaybackStatus {
@@ -76,7 +129,7 @@ export interface PlaylistPlaybackStatus {
   }
 }
 
-export interface PlaylistApiResponse { 
+export interface PlaylistApiResponse {
   playlists: [
     {
       id: string;
