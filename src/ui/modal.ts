@@ -13,6 +13,7 @@ export class ObsidianFMInsert extends Modal {
   private selectedId: string | null = null;
   private selectedType: InsertResult["type"] = null;
   private selectedLabel = "";
+  private label = "";
 
   private repeat: RepeatMode = "off";
   private shuffle = false;
@@ -50,10 +51,11 @@ export class ObsidianFMInsert extends Modal {
     });
 
     /* ------------------------------------------------------------
-       NAME FIELD
+       CREATE SECTIONS (do NOT append yet)
     ------------------------------------------------------------ */
-    const nameSection = contentEl.createDiv({ cls: "obsidianfm-section" });
 
+    // NAME FIELD
+    const nameSection = createDiv({ cls: "obsidianfm-section" });
     new Setting(nameSection)
       .setName(this.mode === "normal" ? "Name (optional)" : "Name (required)")
       .addText(text => {
@@ -62,14 +64,11 @@ export class ObsidianFMInsert extends Modal {
             ? "Enter player name…"
             : "Enter soundscape name…"
         );
-        text.onChange(v => this.selectedLabel = v);
+        text.onChange(v => this.label = v);
       });
 
-    /* ------------------------------------------------------------
-       SEARCH FIELD
-    ------------------------------------------------------------ */
-    const searchSection = contentEl.createDiv({ cls: "obsidianfm-section" });
-
+    // SEARCH FIELD
+    const searchSection = createDiv({ cls: "obsidianfm-section" });
     const searchSetting = new Setting(searchSection)
       .setName("Search")
       .setDesc(
@@ -86,18 +85,15 @@ export class ObsidianFMInsert extends Modal {
       cls: "obsidianfm-search-input"
     });
 
-    /* ------------------------------------------------------------
-       DETAILS OR STACK SECTION
-    ------------------------------------------------------------ */
-    const detailsSection = contentEl.createDiv({
+    // DETAILS OR STACK SECTION
+    const detailsSection = createDiv({
       cls: "obsidianfm-section obsidianfm-dynamic-section"
     });
 
-    const stackSection = contentEl.createDiv({
+    const stackSection = createDiv({
       cls: "obsidianfm-section obsidianfm-dynamic-section"
     });
 
-    // Hide unused section
     detailsSection.style.display = this.mode === "normal" ? "block" : "none";
     stackSection.style.display = this.mode === "soundscape" ? "block" : "none";
 
@@ -126,13 +122,13 @@ export class ObsidianFMInsert extends Modal {
     );
 
     /* ------------------------------------------------------------
-       SOUNDSCAPE PREVIEW
+       PREVIEW (soundscape only)
     ------------------------------------------------------------ */
-    if (this.mode === "soundscape") {
-      const previewSection = contentEl.createDiv({ cls: "obsidianfm-section" });
-      previewSection.createEl("h3", { text: "Preview" });
+    let previewSection: HTMLElement | null = null;
 
- 
+    if (this.mode === "soundscape") {
+      previewSection = createDiv({ cls: "obsidianfm-section" });
+      previewSection.createEl("h3", { text: "Preview" });
 
       new Setting(previewSection)
         .setName("Preview Soundscape")
@@ -152,17 +148,39 @@ export class ObsidianFMInsert extends Modal {
               for (const s of this.stack) {
                 await ctrl.enterPreviewMode(s.id, "sound", { additive: true });
               }
-
               this.previewing = true;
               updateIcon();
             } else {
               await ctrl.exitPreviewMode();
-
               this.previewing = false;
               updateIcon();
             }
           });
         });
+    }
+
+    /* ------------------------------------------------------------
+       APPEND SECTIONS IN DIFFERENT ORDERS
+    ------------------------------------------------------------ */
+
+    if (this.mode === "normal") {
+      // NORMAL MODE ORDER:
+      // 1. Search
+      // 2. Name (optional)
+      // 3. Details
+      contentEl.appendChild(searchSection);
+      contentEl.appendChild(nameSection);
+      contentEl.appendChild(detailsSection);
+    } else {
+      // SOUNDSCAPE MODE ORDER:
+      // 1. Name (required)
+      // 2. Search
+      // 3. Stack
+      // 4. Preview
+      contentEl.appendChild(nameSection);
+      contentEl.appendChild(searchSection);
+      contentEl.appendChild(stackSection);
+      if (previewSection) contentEl.appendChild(previewSection);
     }
 
     /* ------------------------------------------------------------
@@ -247,10 +265,7 @@ export class ObsidianFMInsert extends Modal {
     ------------------------------------------------------------ */
     if (item.type === "track" || item.type === "playlist") {
 
-      // Inner block that gets disabled visually
-      const innerBlock = container.createDiv({
-        cls: "obsidianfm-override-inner"
-      });
+
 
       // Always-active override toggle (OUTSIDE disabled block)
       new Setting(container)
@@ -262,6 +277,11 @@ export class ObsidianFMInsert extends Modal {
             innerBlock.classList.toggle("obsidianfm-disabled", !v);
           })
         );
+
+      // Inner block that gets disabled visually
+      const innerBlock = container.createDiv({
+        cls: "obsidianfm-override-inner"
+      });
 
       // Repeat
       new Setting(innerBlock)
@@ -364,13 +384,13 @@ export class ObsidianFMInsert extends Modal {
       if (this.stack.length === 0) {
         new Notice("Add at least one sound to the soundscape.");
         return;
-      } else if (this.selectedLabel.trim() === "") {
+      } else if (this.label.trim() === "") {
         new Notice("Please enter a name for the soundscape.");
         return;
       }
 
       this.close();
-      this.onSubmit({ stack: this.stack, title: this.selectedLabel, type: "soundscape" });
+      this.onSubmit({ stack: this.stack, title: this.label, type: "soundscape" });
       return;
     }
 
@@ -381,7 +401,7 @@ export class ObsidianFMInsert extends Modal {
 
     this.close();
     this.onSubmit({
-      title: this.selectedLabel,
+      title: this.label ? this.label : this.selectedLabel,
       trackId: this.selectedId,
       type: this.selectedType,
       random: this.random,
