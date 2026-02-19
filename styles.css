@@ -429,37 +429,12 @@ button.obsidianfm-repeat-btn.is-active {
 /* ------------------------------------------------------------
    GENERAL MODAL LAYOUT
 ------------------------------------------------------------ */
-.obsidianfm-section {
-  margin-top: 1.25rem;
-  padding: 1rem 1.25rem;
-  background: var(--background-secondary);
-  border-radius: 8px;
-  border: 1px solid var(--background-modifier-border);
-}
-
 .obsidianfm-section h3,
 .obsidianfm-section h4 {
   margin-top: 0;
   margin-bottom: 0.75rem;
   font-weight: 600;
   color: var(--text-normal);
-}
-
-/* ------------------------------------------------------------
-   SEARCH INPUT
------------------------------------------------------------- */
-.obsidianfm-search-input {
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--background-modifier-border);
-  background: var(--background-primary);
-}
-
-.obsidianfm-search-input:focus {
-  outline: none;
-  border-color: var(--interactive-accent);
-  box-shadow: 0 0 0 2px var(--interactive-accent-hover);
 }
 
 /* ------------------------------------------------------------
@@ -524,7 +499,49 @@ button.obsidianfm-repeat-btn.is-active {
 }
 
 /* ------------------------------------------------------------
-   STACK BUILDER
+   GENERAL SECTIONS
+------------------------------------------------------------ */
+.obsidianfm-section {
+  margin-top: 1.25rem;
+  padding: 1rem 1.25rem;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--background-modifier-border);
+}
+
+/* Hide empty/dynamic sections cleanly */
+.obsidianfm-dynamic-section:empty {
+  display: none !important;
+}
+
+/* ------------------------------------------------------------
+   SEARCH INPUT
+------------------------------------------------------------ */
+.obsidianfm-search-input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+}
+
+.obsidianfm-search-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 2px var(--interactive-accent-hover);
+}
+
+/* ------------------------------------------------------------
+   DISABLED OVERRIDE BLOCK
+------------------------------------------------------------ */
+.obsidianfm-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  filter: grayscale(0.8);
+}
+
+/* ------------------------------------------------------------
+   STACK ROWS
 ------------------------------------------------------------ */
 .stack-row {
   display: flex;
@@ -537,17 +554,12 @@ button.obsidianfm-repeat-btn.is-active {
   border-radius: 6px;
 }
 
-.stack-row span {
-  font-weight: 500;
-}
-
 .stack-row button {
   background: transparent;
   border: none;
   color: var(--text-muted);
   font-size: 18px;
   cursor: pointer;
-  padding: 0 4px;
 }
 
 .stack-row button:hover {
@@ -555,15 +567,27 @@ button.obsidianfm-repeat-btn.is-active {
 }
 
 /* ------------------------------------------------------------
-   PREVIEW BUTTONS (soundscape)
+   PREVIEW BUTTON
 ------------------------------------------------------------ */
 .obsidianfm-section .setting-item button {
   border-radius: 6px;
+  padding: 6px 10px;
+  transition: background 0.15s ease;
 }
 
 .obsidianfm-section .setting-item button:hover {
   background: var(--background-modifier-hover);
 }
+
+
+.obsidianfm-disabled .setting-item-control {
+  filter: grayscale(1);
+}
+
+.stack-row button:hover {
+  color: var(--text-normal);
+}
+
 
 
 /* ===================================================== */

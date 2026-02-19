@@ -1,4 +1,4 @@
-import { App, Modal, Setting, Notice } from "obsidian";
+import { App, Modal, Setting, Notice, setIcon } from "obsidian";
 import type ObsidianFMPlugin from "../main";
 import { Autocomplete } from "./autocomplete";
 import { playSound, stopSound } from "src/api/kenku";
@@ -19,8 +19,9 @@ export class ObsidianFMInsert extends Modal {
   private overlapping = false;
   private playOnce = false;
   private random = false;
-  private volume = 100;
+  private volume = 1;
   private overrideSettings = false;
+  private previewing = false;
 
   private stack: { id: string; label: string }[] = [];
 
@@ -39,16 +40,18 @@ export class ObsidianFMInsert extends Modal {
   onOpen() {
     const { contentEl } = this;
 
-    // Title
+    /* ------------------------------------------------------------
+       TITLE
+    ------------------------------------------------------------ */
     contentEl.createEl("h2", {
       text: this.mode === "normal"
         ? "Insert ObsidianFM Player"
         : "Create ObsidianFM Soundscape"
     });
 
-    // -------------------------------
-    // NAME FIELD (shared)
-    // -------------------------------
+    /* ------------------------------------------------------------
+       NAME FIELD
+    ------------------------------------------------------------ */
     const nameSection = contentEl.createDiv({ cls: "obsidianfm-section" });
 
     new Setting(nameSection)
@@ -62,9 +65,9 @@ export class ObsidianFMInsert extends Modal {
         text.onChange(v => this.selectedLabel = v);
       });
 
-    // -------------------------------
-    // SEARCH SECTION (shared)
-    // -------------------------------
+    /* ------------------------------------------------------------
+       SEARCH FIELD
+    ------------------------------------------------------------ */
     const searchSection = contentEl.createDiv({ cls: "obsidianfm-section" });
 
     const searchSetting = new Setting(searchSection)
@@ -83,20 +86,29 @@ export class ObsidianFMInsert extends Modal {
       cls: "obsidianfm-search-input"
     });
 
-    // -------------------------------
-    // DETAILS OR STACK SECTION
-    // -------------------------------
-    const detailsSection = contentEl.createDiv({ cls: "obsidianfm-section" });
-    const stackSection = contentEl.createDiv({ cls: "obsidianfm-section" });
+    /* ------------------------------------------------------------
+       DETAILS OR STACK SECTION
+    ------------------------------------------------------------ */
+    const detailsSection = contentEl.createDiv({
+      cls: "obsidianfm-section obsidianfm-dynamic-section"
+    });
+
+    const stackSection = contentEl.createDiv({
+      cls: "obsidianfm-section obsidianfm-dynamic-section"
+    });
+
+    // Hide unused section
+    detailsSection.style.display = this.mode === "normal" ? "block" : "none";
+    stackSection.style.display = this.mode === "soundscape" ? "block" : "none";
 
     if (this.mode === "soundscape") {
       stackSection.createEl("h3", { text: "Soundscape Stack" });
       this.renderStack(stackSection);
     }
 
-    // -------------------------------
-    // AUTOCOMPLETE (shared)
-    // -------------------------------
+    /* ------------------------------------------------------------
+       AUTOCOMPLETE
+    ------------------------------------------------------------ */
     const items = this.buildAutocompleteItems();
 
     new Autocomplete(
@@ -113,39 +125,49 @@ export class ObsidianFMInsert extends Modal {
       }
     );
 
-    // -------------------------------
-    // PREVIEW SECTION (soundscape only)
-    // -------------------------------
+    /* ------------------------------------------------------------
+       SOUNDSCAPE PREVIEW
+    ------------------------------------------------------------ */
     if (this.mode === "soundscape") {
       const previewSection = contentEl.createDiv({ cls: "obsidianfm-section" });
       previewSection.createEl("h3", { text: "Preview" });
+
+ 
 
       new Setting(previewSection)
         .setName("Preview Soundscape")
         .setDesc("Play all sounds in the stack to hear how they blend.")
         .addButton(btn => {
-          btn.setIcon("play")
-            .setTooltip("Play Preview")
-            .onClick(() => {
+          const updateIcon = () => {
+            btn.setIcon(this.previewing ? "square" : "play");
+            btn.setTooltip(this.previewing ? "Stop Preview" : "Play Preview");
+          };
+
+          updateIcon();
+
+          btn.onClick(async () => {
+            const ctrl = this.plugin.playbackController;
+
+            if (!this.previewing) {
               for (const s of this.stack) {
-                playSound(this.plugin.settings.baseUrl, s.id, "sound");
+                await ctrl.enterPreviewMode(s.id, "sound", { additive: true });
               }
-            });
-        })
-        .addButton(btn => {
-          btn.setIcon("square")
-            .setTooltip("Stop Preview")
-            .onClick(() => {
-              for (const s of this.stack) {
-                stopSound(this.plugin.settings.baseUrl, "sound", s.id);
-              }
-            });
+
+              this.previewing = true;
+              updateIcon();
+            } else {
+              await ctrl.exitPreviewMode();
+
+              this.previewing = false;
+              updateIcon();
+            }
+          });
         });
     }
 
-    // -------------------------------
-    // INSERT BUTTON (shared)
-    // -------------------------------
+    /* ------------------------------------------------------------
+       INSERT BUTTON
+    ------------------------------------------------------------ */
     new Setting(contentEl)
       .addButton(btn => {
         btn.setButtonText("Insert")
@@ -220,44 +242,69 @@ export class ObsidianFMInsert extends Modal {
   private renderProperties(container: HTMLElement, item: SuggestItem) {
     container.empty();
 
+    /* ------------------------------------------------------------
+       TRACK / PLAYLIST SETTINGS
+    ------------------------------------------------------------ */
     if (item.type === "track" || item.type === "playlist") {
+
+      // Inner block that gets disabled visually
+      const innerBlock = container.createDiv({
+        cls: "obsidianfm-override-inner"
+      });
+
+      // Always-active override toggle (OUTSIDE disabled block)
       new Setting(container)
         .setName("Override Playback Settings")
-        .setDesc("Override the player's default playback settings for this item.")
-        .addToggle(t => t.setValue(this.overrideSettings).onChange(v => this.overrideSettings = v));
+        .setDesc("Enable custom playback settings for this item.")
+        .addToggle(t =>
+          t.setValue(this.overrideSettings).onChange(v => {
+            this.overrideSettings = v;
+            innerBlock.classList.toggle("obsidianfm-disabled", !v);
+          })
+        );
 
-      new Setting(container)
+      // Repeat
+      new Setting(innerBlock)
         .setName("Repeat")
-        .setDesc("Select repeat mode for this item. For playlists, 'playlist' will repeat the whole playlist and 'track' will repeat the individual track.")
+        .setDesc("For playlists: 'playlist' repeats the whole list, 'track' repeats the current track.")
         .addDropdown(drop => {
-          drop.addOption("off", "Off")
+          drop.addOption("off", "Off");
           drop.addOption("playlist", "Playlist");
           drop.addOption("track", "Track");
           drop.setValue(this.repeat);
           drop.onChange(v => this.repeat = v as RepeatMode);
-        })
-        .setDisabled(!this.overrideSettings);
+        });
 
-      new Setting(container)
+      // Shuffle
+      new Setting(innerBlock)
         .setName("Shuffle")
-        .setDesc("Whether to shuffle the playlist. For playlist this shuffles immediately, for tracks this plays the track then shuffles the rest of the playlist.")
-        .addToggle(t => t.setValue(this.shuffle).onChange(v => this.shuffle = v))
-        .setDisabled(!this.overrideSettings);
+        .setDesc("Shuffle playback order.")
+        .addToggle(t => t.setValue(this.shuffle).onChange(v => this.shuffle = v));
 
-      item.type === "track" && new Setting(container)
-        .setName("Play Once")
-        .setDesc("Play the item only once, then stop.")
-        .addToggle(t => t.setValue(this.playOnce).onChange(v => this.playOnce = v))
-        .setDisabled(!this.overrideSettings);
+      // Play Once (track only)
+      if (item.type === "track") {
+        new Setting(innerBlock)
+          .setName("Play Once")
+          .setDesc("Play the track once, then stop.")
+          .addToggle(t => t.setValue(this.playOnce).onChange(v => this.playOnce = v));
+      }
 
-      new Setting(container)
+      // Volume
+      new Setting(innerBlock)
         .setName("Volume")
-        .addSlider(s => s
-          .setLimits(0, 100, 1)
-          .setValue(this.volume)
-          .onChange(v => this.volume = v));
+        .addSlider(s =>
+          s.setLimits(0, 1, 0.01)
+            .setValue(this.volume)
+            .onChange(v => this.volume = v)
+        );
+
+      // Apply disabled state on load
+      innerBlock.classList.toggle("obsidianfm-disabled", !this.overrideSettings);
     }
 
+    /* ------------------------------------------------------------
+       SOUNDBOARD SETTINGS
+    ------------------------------------------------------------ */
     if (item.type === "soundboard") {
       container.createEl("h4", { text: "Soundboard Options" });
 
@@ -271,11 +318,17 @@ export class ObsidianFMInsert extends Modal {
         .addToggle(t => t.setValue(this.overlapping).onChange(v => this.overlapping = v));
     }
   }
-
   // ------------------------------------------------------------
   // MODE B — STACK BUILDER
   // ------------------------------------------------------------
   private handleStackSelect(item: SuggestItem, stackContainer: HTMLElement, text: HTMLInputElement) {
+    // Prevent duplicates
+    if (this.stack.some(s => s.id === item.id)) {
+      new Notice("This sound is already in the stack.");
+      text.value = "";
+      return;
+    }
+
     this.stack.push({ id: item.id, label: item.label });
     this.renderStack(stackContainer);
     text.value = "";
@@ -287,9 +340,15 @@ export class ObsidianFMInsert extends Modal {
 
     this.stack.forEach((s, i) => {
       const row = container.createDiv({ cls: "stack-row" });
-      row.createSpan({ text: `${i + 1}. ${s.label}` });
 
-      const removeBtn = row.createEl("button", { text: "×" });
+      const label = row.createDiv({ cls: "stack-label" });
+      label.setText(`${i + 1}. ${s.label}`);
+
+      const removeBtn = row.createEl("button", {
+        cls: "stack-remove-btn",
+      });
+      setIcon(removeBtn, "trash");
+
       removeBtn.onclick = () => {
         this.stack.splice(i, 1);
         this.renderStack(container);
@@ -335,7 +394,14 @@ export class ObsidianFMInsert extends Modal {
     });
   }
 
-  onClose() {
+  onClose = async () => {
+    const ctrl = this.plugin.playbackController;
+
+    if (this.previewing) {
+      await ctrl.exitPreviewMode();
+      this.previewing = false;
+    }
+
     this.contentEl.empty();
-  }
+  };
 }

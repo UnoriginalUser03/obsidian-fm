@@ -174,9 +174,6 @@ export default class ObsidianFMPlugin extends Plugin {
     this.playbackInterpolator.start();
   }
 
-  // ------------------------------------------------------------
-  // INLINE BUILDER
-  // ------------------------------------------------------------
   private buildInlineCode(result: InsertResult): string {
     const params: string[] = [];
 
@@ -187,6 +184,10 @@ export default class ObsidianFMPlugin extends Plugin {
     if (result.overrideSettings) {
       if (result.repeat) {
         params.push(`repeat="${result.repeat}"`);
+      }
+
+      if (result.volume !== undefined) {
+        params.push(`volume="${result.volume}"`);
       }
 
       if (result.type === "playlist") {
@@ -210,9 +211,6 @@ export default class ObsidianFMPlugin extends Plugin {
     return `\`obsidianfm: ${params.join(" ")}\``;
   }
 
-  // ------------------------------------------------------------
-  // INLINE PARSER
-  // ------------------------------------------------------------
   private parseInlineKenku(raw: string): Record<string, string> {
     const text = raw.replace("obsidianfm:", "").trim();
     const result: Record<string, string> = {};
@@ -234,9 +232,6 @@ export default class ObsidianFMPlugin extends Plugin {
     return result;
   }
 
-  // ------------------------------------------------------------
-  // OPEN PLAYBACK PANE
-  // ------------------------------------------------------------
   async openPlaybackPane() {
     let leaf = this.app.workspace.getRightLeaf(false);
     if (!leaf) leaf = this.app.workspace.getLeaf("split", "vertical");

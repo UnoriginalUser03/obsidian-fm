@@ -6,7 +6,8 @@ import ObsidianFMPlugin from "src/main";
 
 export class PlaybackController {
     public suppressRestore = false;
-    private previewSnapshot: PlaybackSnapshot | null = null;
+    public previewSnapshot: PlaybackSnapshot | null = null;
+    private additivePreviewStarted = false;
 
 
     constructor(private plugin: ObsidianFMPlugin) { }
@@ -259,21 +260,37 @@ export class PlaybackController {
         s.currentSoundscapeId = snapshot.soundscapeID;
 
         if (snapshot.paused && restoredSomething) {
-            await new Promise(res => setTimeout(res, 50)); 
+            await new Promise(res => setTimeout(res, 50));
             await this.Pause();
-        } 
+        }
 
         s.resetSoundBaseline(performance.now());
         s.resetTrackBaseline(performance.now());
         this.updateUI();
     }
+    async enterPreviewMode(
+        id: string,
+        type: MediaType,
+        opts?: { additive?: boolean }
+    ) {
+        const additive = opts?.additive ?? false;
 
-    async enterPreviewMode(id: string, type: MediaType) {
         if (!this.previewSnapshot) {
             this.previewSnapshot = this.captureState();
+            this.additivePreviewStarted = false; // reset for new preview session
         }
 
-        await this.stopAll();
+        // If additive but first call → stop everything once
+        if (additive && !this.additivePreviewStarted) {
+            await this.stopAll();
+            this.additivePreviewStarted = true;
+        }
+
+        // If not additive → always stop all
+        if (!additive) {
+            await this.stopAll();
+        }
+
         await playSound(this.baseUrl, id, type);
 
         if (type === "sound") {
@@ -286,15 +303,16 @@ export class PlaybackController {
     }
 
     async exitPreviewMode() {
-        const s = this.state;
-
-        // Stop everything first
         await this.stopAll();
 
-        // Only restore snapshot if NOT switching previews
         if (!this.suppressRestore && this.previewSnapshot) {
-            await this.restoreState(this.previewSnapshot);
+            const snap = this.previewSnapshot;
             this.previewSnapshot = null;
+            this.additivePreviewStarted = false;
+            await this.restoreState(snap);
+        } else {
+            this.previewSnapshot = null;
+            this.additivePreviewStarted = false;
         }
     }
 }
