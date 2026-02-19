@@ -1,6 +1,11 @@
 /* ===================================================== */
 /*                    AUTOCOMPLETE                       */
 /* ===================================================== */
+.obsidianfm-inline-edit-wrapper {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
 
 .obsidianfm-suggest-popup {
   background: var(--background-primary);
@@ -37,6 +42,20 @@
   display: flex;
   align-items: center;
   opacity: 0.8;
+}
+
+.obsidianfm-inline-edit button {
+  cursor: pointer;
+}
+
+.obsidianfm-edit-icon {
+  font-size: 14px;
+  padding: 2px 4px;
+  opacity: 0.8;
+}
+
+.obsidianfm-edit-icon:hover {
+  opacity: 1;
 }
 
 .obsidianfm-suggest-label {
@@ -444,7 +463,7 @@ button.obsidianfm-repeat-btn.is-active {
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
   border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
   max-height: 300px;
   overflow-y: auto;
   z-index: 9999;

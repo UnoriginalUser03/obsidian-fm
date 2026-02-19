@@ -12,7 +12,7 @@ export class ObsidianFMInsert extends Modal {
   // State
   private selectedId: string | null = null;
   private selectedType: InsertResult["type"] = null;
-  private selectedLabel = "";
+  private trackTitle = "";
   private label = "";
 
   private repeat: RepeatMode = "off";
@@ -30,12 +30,43 @@ export class ObsidianFMInsert extends Modal {
     app: App,
     plugin: ObsidianFMPlugin,
     onSubmit: (result: InsertResult) => void,
-    mode: InsertMode = "normal"
+    mode: InsertMode = "normal",
+    initialConfig?: Record<string, string>
   ) {
     super(app);
     this.plugin = plugin;
     this.onSubmit = onSubmit;
     this.mode = mode;
+
+    if (initialConfig) {
+      this.applyInitialConfig(initialConfig);
+    }
+  }
+
+  private applyInitialConfig(config: Record<string, string>) {
+    this.selectedId = config.id ?? null;
+    this.selectedType = config.type as any ?? null;
+    this.trackTitle = config.trackTitle ?? "";
+    this.label = config.title ?? "";
+
+    // Playback settings
+    if (config.repeat) this.repeat = config.repeat as RepeatMode;
+    if (config.shuffle) this.shuffle = config.shuffle === "true";
+    if (config.playOnce) this.playOnce = config.playOnce === "true";
+    if (config.volume) this.volume = Number(config.volume);
+    if (config.overrideSettings) this.overrideSettings = config.overrideSettings === "true";
+
+    // Soundboard
+    if (config.random) this.random = config.random === "true";
+    if (config.overlapping) this.overlapping = config.overlapping === "true";
+
+    // Soundscape stack
+    if (config.stack) {
+      this.stack = config.stack.split(",").map(id => {
+        const sound = this.plugin.sounds.find(s => s.id === id);
+        return { id, label: sound?.title ?? id };
+      });
+    }
   }
 
   onOpen() {
@@ -46,8 +77,8 @@ export class ObsidianFMInsert extends Modal {
     ------------------------------------------------------------ */
     contentEl.createEl("h2", {
       text: this.mode === "normal"
-        ? "Insert ObsidianFM Player"
-        : "Create ObsidianFM Soundscape"
+        ? (this.selectedId ? "Edit ObsidianFM Player" : "Insert ObsidianFM Player")
+        : (this.stack.length > 0 ? "Edit ObsidianFM Soundscape" : "Create ObsidianFM Soundscape")
     });
 
     /* ------------------------------------------------------------
@@ -64,6 +95,7 @@ export class ObsidianFMInsert extends Modal {
             ? "Enter player name…"
             : "Enter soundscape name…"
         );
+        text.setValue(this.label); // PREFILL
         text.onChange(v => this.label = v);
       });
 
@@ -82,8 +114,12 @@ export class ObsidianFMInsert extends Modal {
       placeholder: this.mode === "normal"
         ? "Search tracks, sounds, playlists…"
         : "Search looping sounds…",
-      cls: "obsidianfm-search-input"
+      cls: "obsidianfm-search-input",
     });
+    if (this.selectedId && this.trackTitle) {
+      searchInput.value = this.trackTitle;
+    }
+
 
     // DETAILS OR STACK SECTION
     const detailsSection = createDiv({
@@ -97,6 +133,9 @@ export class ObsidianFMInsert extends Modal {
     detailsSection.style.display = this.mode === "normal" ? "block" : "none";
     stackSection.style.display = this.mode === "soundscape" ? "block" : "none";
 
+    /* ------------------------------------------------------------
+       PREFILL: If editing a soundscape, render stack immediately
+    ------------------------------------------------------------ */
     if (this.mode === "soundscape") {
       stackSection.createEl("h3", { text: "Soundscape Stack" });
       this.renderStack(stackSection);
@@ -120,6 +159,20 @@ export class ObsidianFMInsert extends Modal {
         }
       }
     );
+
+    /* ------------------------------------------------------------
+       PREFILL: If editing a normal player, render its properties
+    ------------------------------------------------------------ */
+    if (this.mode === "normal" && this.selectedId && this.selectedType) {
+      const item: SuggestItem = {
+        id: this.selectedId,
+        label: this.trackTitle,
+        type: this.selectedType,
+        icon: this.plugin.typeIconMap[this.selectedType],
+        subtitle: ""
+      };
+      this.renderProperties(detailsSection, item);
+    }
 
     /* ------------------------------------------------------------
        PREVIEW (soundscape only)
@@ -164,19 +217,10 @@ export class ObsidianFMInsert extends Modal {
     ------------------------------------------------------------ */
 
     if (this.mode === "normal") {
-      // NORMAL MODE ORDER:
-      // 1. Search
-      // 2. Name (optional)
-      // 3. Details
       contentEl.appendChild(searchSection);
       contentEl.appendChild(nameSection);
       contentEl.appendChild(detailsSection);
     } else {
-      // SOUNDSCAPE MODE ORDER:
-      // 1. Name (required)
-      // 2. Search
-      // 3. Stack
-      // 4. Preview
       contentEl.appendChild(nameSection);
       contentEl.appendChild(searchSection);
       contentEl.appendChild(stackSection);
@@ -184,11 +228,11 @@ export class ObsidianFMInsert extends Modal {
     }
 
     /* ------------------------------------------------------------
-       INSERT BUTTON
+       INSERT / SAVE BUTTON
     ------------------------------------------------------------ */
     new Setting(contentEl)
       .addButton(btn => {
-        btn.setButtonText("Insert")
+        btn.setButtonText(this.selectedId ? "Save" : "Insert")
           .setCta()
           .onClick(() => this.handleInsert(detailsSection));
       });
@@ -252,7 +296,7 @@ export class ObsidianFMInsert extends Modal {
   private handleNormalSelect(item: SuggestItem, detailsContainer: HTMLElement) {
     this.selectedId = item.id;
     this.selectedType = item.type;
-    this.selectedLabel = item.label;
+    this.trackTitle = item.label;
 
     this.renderProperties(detailsContainer, item);
   }
@@ -301,13 +345,13 @@ export class ObsidianFMInsert extends Modal {
         .setDesc("Shuffle playback order.")
         .addToggle(t => t.setValue(this.shuffle).onChange(v => this.shuffle = v));
 
-      // Play Once (track only)
-      if (item.type === "track") {
-        new Setting(innerBlock)
-          .setName("Play Once")
-          .setDesc("Play the track once, then stop.")
-          .addToggle(t => t.setValue(this.playOnce).onChange(v => this.playOnce = v));
-      }
+      // Play Once (track only) need to implement
+      // if (item.type === "track") {
+      //   new Setting(innerBlock)
+      //     .setName("Play Once")
+      //     .setDesc("Play the track once, then stop.")
+      //     .addToggle(t => t.setValue(this.playOnce).onChange(v => this.playOnce = v));
+      // }
 
       // Volume
       new Setting(innerBlock)
@@ -401,7 +445,8 @@ export class ObsidianFMInsert extends Modal {
 
     this.close();
     this.onSubmit({
-      title: this.label ? this.label : this.selectedLabel,
+      title: this.label ? this.label : this.trackTitle,
+      trackTitle: this.trackTitle,
       trackId: this.selectedId,
       type: this.selectedType,
       random: this.random,
@@ -412,6 +457,7 @@ export class ObsidianFMInsert extends Modal {
       volume: this.volume,
       overrideSettings: this.overrideSettings,
     });
+
   }
 
   onClose = async () => {

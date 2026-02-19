@@ -1,13 +1,2 @@
-+ Add loop options/fade in and fade out in modal. (Create under params)
-+ Add memory for previous playing track with preview playback (STRETCH)
-+ Add SFX stacks option to play multiple in group at once inline. 
-+ Add Playback start options, have song loop multiple times
-+ Add custom playlists support from obsidian
-
- Soundboard sounds update whether they are playing or not regardless of if they were 
- triggered by Obsidian or not. Get Music and Playlists to behave the same way -> 
- Updating playback IDs etc when changed in obsidian. 
-
- Plugin sync. Make sure playback - both inline and window are in sync with Kenku FM.
-
- Fix up stop sound and play sound. Maybe dont need? 
++ Implement play once 
++ Clean up old inline references on update

@@ -98,6 +98,7 @@ export interface PlaybackSnapshot {
 
 export interface InsertResult {
   title?: string;
+  trackTitle?: string;
   trackId?: string;
   type?: MediaType;
   stack?: { id: string; label: string }[];

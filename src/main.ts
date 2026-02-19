@@ -10,6 +10,7 @@ import {
   Track,
 } from "./api/types";
 
+import { createObsidianFMEditInlineExtension } from "./inline/editinline";
 import { ObsidianFMInsert } from "./ui/modal";
 import { PlaybackState } from "./playback/playbackstate";
 import { PlaybackSync } from "./playback/playbacksync";
@@ -66,6 +67,7 @@ export default class ObsidianFMPlugin extends Plugin {
     // Core systems
     this.playback = new PlaybackState();
     this.inlineButtons = new InlineButtonRegistry(this, this.playback);
+    this.registerEditorExtension(createObsidianFMEditInlineExtension(this));
     this.connection = new ConnectionHandler(this, this.inlineButtons);
     this.playbackSync = new PlaybackSync(this, this.playback, this.inlineButtons);
     this.playbackInterpolator = new PlaybackInterpolator(
@@ -129,6 +131,64 @@ export default class ObsidianFMPlugin extends Plugin {
       },
     });
 
+    this.registerEvent(
+      this.app.workspace.on("editor-menu", (menu, editor, view) => {
+
+        menu.addSeparator();
+        // Header
+        menu.addItem(item => {
+          item.setTitle("ObsidianFM");
+          item.setDisabled(true);
+        });
+
+        // Insert Inline Player
+        menu.addItem(item => {
+          item
+            .setTitle("Insert Inline Player")
+            .setIcon("audio-lines")
+            .onClick(() => {
+              if (!this.kenkuOnline) {
+                new Notice("KenkuFM is offline.");
+                return;
+              }
+
+              new ObsidianFMInsert(
+                this.app,
+                this,
+                (result) => {
+                  editor.replaceSelection(this.buildInlineCode(result));
+                },
+                "normal"
+              ).open();
+            });
+        });
+
+        // Insert Soundscape
+        menu.addItem(item => {
+          item
+            .setTitle("Insert Soundscape")
+            .setIcon("mountain")
+            .onClick(() => {
+              if (!this.kenkuOnline) {
+                new Notice("KenkuFM is offline.");
+                return;
+              }
+
+              new ObsidianFMInsert(
+                this.app,
+                this,
+                (result) => {
+                  editor.replaceSelection(this.buildInlineCode(result));
+                },
+                "soundscape"
+              ).open();
+            });
+        });
+
+        menu.addSeparator();
+      })
+    );
+
     // Inline buttons
     this.registerMarkdownPostProcessor((el) => {
       el.querySelectorAll("code").forEach((codeEl) => {
@@ -174,14 +234,16 @@ export default class ObsidianFMPlugin extends Plugin {
     this.playbackInterpolator.start();
   }
 
-  private buildInlineCode(result: InsertResult): string {
+  public buildInlineCode(result: InsertResult): string {
     const params: string[] = [];
 
     if (result.title) params.push(`title="${result.title}"`);
+    if (result.trackTitle) params.push(`trackTitle="${result.trackTitle}"`)
     if (result.trackId) params.push(`id="${result.trackId}"`);
     if (result.type) params.push(`type="${result.type}"`);
 
     if (result.overrideSettings) {
+      params.push(`overrideSettings="${result.overrideSettings ? "true" : "false"}"`)
       if (result.repeat) {
         params.push(`repeat="${result.repeat}"`);
       }
@@ -189,8 +251,10 @@ export default class ObsidianFMPlugin extends Plugin {
       if (result.volume !== undefined) {
         params.push(`volume="${result.volume}"`);
       }
-
-      if (result.type === "playlist") {
+      if (result.playOnce) {
+        params.push(`playOnce="${result.playOnce}"`)
+      }
+      if (result.shuffle) {
         params.push(`shuffle="${result.shuffle ? "true" : "false"}"`);
       }
     }
@@ -211,7 +275,7 @@ export default class ObsidianFMPlugin extends Plugin {
     return `\`obsidianfm: ${params.join(" ")}\``;
   }
 
-  private parseInlineKenku(raw: string): Record<string, string> {
+  public parseInlineKenku(raw: string): Record<string, string> {
     const text = raw.replace("obsidianfm:", "").trim();
     const result: Record<string, string> = {};
 
