@@ -73,8 +73,6 @@ export class PlaybackController {
     // TRACK / PLAYLIST
     // ------------------------------------------------------------
     async playTrack(id: string, opts?: { shuffle?: boolean; repeat?: RepeatMode; volume?: number }) {
-        await this.stopAll();
-
         if (opts) {
             await setPlayback(this.baseUrl, opts.shuffle, opts.repeat, opts.volume);
         }
@@ -90,8 +88,6 @@ export class PlaybackController {
     }
 
     async playPlaylist(id: string, opts?: { shuffle?: boolean; repeat?: RepeatMode; volume?: number }) {
-        await this.stopAll();
-
         if (opts) {
             await setPlayback(this.baseUrl, opts.shuffle, opts.repeat, opts.volume);
         }
