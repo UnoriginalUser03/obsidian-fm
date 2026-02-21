@@ -2,3 +2,4 @@
 + Clean up old inline references on update
 + Apply changes to playback overwrite settings when resuming track after edits
 + Investigate sync issues between Kenku and Obisidian
++ Expand on offline mode - no editing, or storing last known sounds. 

@@ -143,16 +143,20 @@ export class PlayerSFXPanel {
         const group = this.groupEls[boardName];
         const list = group.querySelector(".obsidianfm-sfx-list") as HTMLElement;
 
-        // Create/update items
+        // Create/update items for this group only
         soundIds.forEach(soundId => {
             if (!this.itemEls[soundId]) {
                 this.itemEls[soundId] = this.createItem(list, soundId);
             }
         });
 
-        // Remove stale items
+        // Remove stale items ONLY from this group
         Object.keys(this.itemEls).forEach(soundId => {
-            if (!soundIds.includes(soundId)) {
+            const sound = this.plugin.sounds.find(s => s.id === soundId);
+            const itemBoard = sound?.soundboardName ?? "Ungrouped";
+
+            // Only remove items that belong to THIS group and are no longer active
+            if (itemBoard === boardName && !soundIds.includes(soundId)) {
                 this.itemEls[soundId].remove();
                 delete this.itemEls[soundId];
             }
