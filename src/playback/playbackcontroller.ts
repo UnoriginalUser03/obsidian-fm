@@ -73,11 +73,10 @@ export class PlaybackController {
     // TRACK / PLAYLIST
     // ------------------------------------------------------------
     async playTrack(id: string, opts?: { shuffle?: boolean; repeat?: RepeatMode; volume?: number }) {
+        await playSound(this.baseUrl, id, "track");
         if (opts) {
             await setPlayback(this.baseUrl, opts.shuffle, opts.repeat, opts.volume);
         }
-
-        await playSound(this.baseUrl, id, "track");
 
         const s = this.state;
         s.currentTrackId = id;
@@ -88,11 +87,11 @@ export class PlaybackController {
     }
 
     async playPlaylist(id: string, opts?: { shuffle?: boolean; repeat?: RepeatMode; volume?: number }) {
+        await playSound(this.baseUrl, id, "playlist");
         if (opts) {
             await setPlayback(this.baseUrl, opts.shuffle, opts.repeat, opts.volume);
         }
 
-        await playSound(this.baseUrl, id, "playlist");
 
         const s = this.state;
         s.currentPlaylistId = id;
