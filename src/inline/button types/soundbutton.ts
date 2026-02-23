@@ -22,7 +22,7 @@ export class SoundButton extends InlineButton {
     const isPlaying = s.currentSounds.has(this.id);
 
     this.el.classList.toggle("is-playing", isPlaying);
-    this.el.disabled = !this.plugin.kenkuOnline;
+    this.el.classList.toggle("is-disabled", !this.plugin.kenkuOnline);
 
     const newIcon = isPlaying ? "square" : "play";
 

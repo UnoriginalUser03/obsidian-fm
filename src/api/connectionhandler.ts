@@ -22,7 +22,9 @@ export class ConnectionHandler {
         const alive = await pingKenkuFM(baseUrl);
         if (!alive) {
             this.plugin.kenkuOnline = false;
+
             new Notice("KenkuFM Remote offline. Retrying...");
+            this.plugin.events.trigger("obsidian-fm:offline");
             this.startReconnectLoop();
             return;
         }
@@ -32,6 +34,7 @@ export class ConnectionHandler {
             this.plugin.kenkuOnline = true;
 
             new Notice("KenkuFM Remote connected!");
+            this.plugin.events.trigger("obsidian-fm:online");
             this.registry.updateAll(performance.now());
         } catch (e) {
             console.error(e);
@@ -68,7 +71,8 @@ export class ConnectionHandler {
         if (!this.plugin.kenkuOnline) return;
 
         this.plugin.kenkuOnline = false;
-        new Notice("❌ KenkuFM Remote disconnected");
+        new Notice("KenkuFM Remote disconnected");
+        this.plugin.events.trigger("obsidian-fm:offline");
 
         // Reset playback state
         const s = this.plugin.playback;
@@ -105,10 +109,12 @@ export class ConnectionHandler {
                     await this.loadAllData();
 
                     this.plugin.kenkuOnline = true;
+
                     this.reconnecting = false;
                     this.reconnectAttemptInFlight = false;
 
                     new Notice("KenkuFM Remote reconnected!");
+                    this.plugin.events.trigger("obsidian-fm:online");
                     this.plugin.inlineButtons.updateAll(performance.now());
                 } catch (e) {
                     console.warn("Reconnect attempt failed:", e);

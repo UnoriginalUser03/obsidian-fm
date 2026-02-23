@@ -39,6 +39,11 @@ class ObsidianFMEditWidget extends WidgetType {
         // Add tooltip
         cleanBtn.setAttribute("aria-label", "Edit ObsidianFM Player");
         cleanBtn.setAttribute("data-tooltip-position", "top");
+
+        if (!this.plugin.kenkuOnline) {
+            cleanBtn.classList.add("obsidianfm-disabled");
+        }
+
         // Replace ONLY the left icon with a Lucide pencil
         const iconEl = cleanBtn.querySelector(".obsidianfm-inline-icon") as HTMLElement;
         if (iconEl) {
@@ -50,6 +55,7 @@ class ObsidianFMEditWidget extends WidgetType {
         cleanBtn.onclick = (evt) => {
             evt.preventDefault();
             evt.stopPropagation();
+            if (!this.plugin.kenkuOnline) return;
 
             const mdView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
             if (!mdView) return;
@@ -90,6 +96,15 @@ class ObsidianFMEditInlinePlugin {
 
     constructor(private view: EditorView, private plugin: ObsidianFMPlugin) {
         this.decorations = this.buildDecorations();
+        this.plugin.events.on("obsidian-fm:online", () => {
+            this.decorations = this.buildDecorations();
+            this.view.update([]);
+        });
+
+        this.plugin.events.on("obsidian-fm:offline", () => {
+            this.decorations = this.buildDecorations();
+            this.view.update([]);
+        });
     }
 
     update(update: ViewUpdate) {

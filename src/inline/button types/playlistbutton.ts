@@ -28,12 +28,12 @@ export class PlaylistButton extends InlineButton {
 
     this.el.classList.toggle("is-playing", isPlaying);
     this.el.classList.toggle("is-paused", isPaused);
-    this.el.disabled = !this.plugin.kenkuOnline;
+    this.el.classList.toggle("is-disabled", !this.plugin.kenkuOnline);
 
     const newIcon =
       isPaused ? "play" :
-      isPlaying ? "pause" :
-      "play";
+        isPlaying ? "pause" :
+          "play";
 
     if (this.iconEl.dataset.currentIcon !== newIcon) {
       this.iconEl.dataset.currentIcon = newIcon;
@@ -101,7 +101,11 @@ export class PlaylistButton extends InlineButton {
     try {
       if (isCurrent) {
         if (s.paused) {
-          await ctrl.Resume();
+          await ctrl.Resume({
+            shuffle: this.shuffle,
+            repeat: this.repeat,
+            volume: this.volume
+          });
         } else {
           await ctrl.Pause();
         }

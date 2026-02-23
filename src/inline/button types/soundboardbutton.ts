@@ -30,7 +30,7 @@ export class SoundboardButton extends InlineButton {
     const allPlaying = playingCount === board.sounds.length;
 
     this.el.classList.toggle("is-playing", hasPlaying);
-    this.el.disabled = !this.plugin.kenkuOnline;
+    this.el.classList.toggle("is-disabled", !this.plugin.kenkuOnline);
 
     let newIcon: string;
 

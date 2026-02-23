@@ -187,11 +187,16 @@ export class PlaybackController {
         this.updateUI();
     }
 
-    async Resume() {
+    async Resume(opts?: { shuffle?: boolean; repeat?: RepeatMode; volume?: number }) {
         const s = this.state;
         if (!s.currentTrackId) return;
 
+        if (opts) {
+            await setPlayback(this.baseUrl, opts.shuffle, opts.repeat, opts.volume);
+        }
+        
         await setPlaylistPlayback(this.baseUrl, true);
+
         s.paused = false;
         s.resetTrackBaseline(performance.now());
         this.updateUI();

@@ -89,6 +89,7 @@ export class PlayerProgress {
   // SLIDER INTERACTION
   // ------------------------------------------------------------
   private onPointerDown(e: PointerEvent) {
+    if(this.plugin.playback.currentTrackId === null) return;
     this.isDragging = true;
     this.container.classList.add("obsidianfm-progress-dragging");
     this.updateDrag(e);

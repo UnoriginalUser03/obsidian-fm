@@ -18,6 +18,12 @@ export class Autocomplete {
 
     private currentPreview: string | null = null;
 
+    // Bound handlers for proper cleanup
+    private onInput = () => this.update(this.inputEl.value);
+    private onKeyDown = (evt: KeyboardEvent) => this.handleKeyDown(evt);
+    private onDocMouseDown = (evt: MouseEvent) => this.handleDocMouseDown(evt);
+    private onBlur = () => setTimeout(() => this.close(), 150);
+
     constructor(
         app: App,
         plugin: ObsidianFMPlugin,
@@ -38,50 +44,53 @@ export class Autocomplete {
         this.registerEvents();
     }
 
+    // ------------------------------------------------------------
+    // EVENT REGISTRATION
+    // ------------------------------------------------------------
     private registerEvents() {
-        this.inputEl.addEventListener("input", () => {
-            this.update(this.inputEl.value);
-        });
+        this.inputEl.addEventListener("input", this.onInput);
+        this.inputEl.addEventListener("keydown", this.onKeyDown);
+        this.inputEl.addEventListener("blur", this.onBlur);
 
-        this.inputEl.addEventListener("keydown", (evt) => {
-            if (!this.isOpen) return;
-
-            if (evt.key === "ArrowDown") {
-                this.selectedIndex =
-                    (this.selectedIndex + 1) % this.filtered.length;
-                this.render();
-                evt.preventDefault();
-            }
-
-            if (evt.key === "ArrowUp") {
-                this.selectedIndex =
-                    (this.selectedIndex - 1 + this.filtered.length) %
-                    this.filtered.length;
-                this.render();
-                evt.preventDefault();
-            }
-
-            if (evt.key === "Enter") {
-                const entry = this.filtered[this.selectedIndex];
-                if (entry) this.choose(entry.item);
-                evt.preventDefault();
-            }
-        });
-
-        document.addEventListener("mousedown", (evt) => {
-            if (
-                !this.popupEl.contains(evt.target as Node) &&
-                evt.target !== this.inputEl
-            ) {
-                this.close();
-            }
-        });
-
-        this.inputEl.addEventListener("blur", () => {
-            setTimeout(() => this.close(), 150);
-        });
+        document.addEventListener("mousedown", this.onDocMouseDown);
     }
 
+    private handleKeyDown(evt: KeyboardEvent) {
+        if (!this.isOpen) return;
+
+        if (evt.key === "ArrowDown") {
+            this.selectedIndex = (this.selectedIndex + 1) % this.filtered.length;
+            this.render();
+            evt.preventDefault();
+        }
+
+        if (evt.key === "ArrowUp") {
+            this.selectedIndex =
+                (this.selectedIndex - 1 + this.filtered.length) %
+                this.filtered.length;
+            this.render();
+            evt.preventDefault();
+        }
+
+        if (evt.key === "Enter") {
+            const entry = this.filtered[this.selectedIndex];
+            if (entry) this.choose(entry.item);
+            evt.preventDefault();
+        }
+    }
+
+    private handleDocMouseDown(evt: MouseEvent) {
+        if (
+            !this.popupEl.contains(evt.target as Node) &&
+            evt.target !== this.inputEl
+        ) {
+            this.close();
+        }
+    }
+
+    // ------------------------------------------------------------
+    // UPDATE + FILTERING
+    // ------------------------------------------------------------
     private update(query: string) {
         if (!query) {
             this.filtered = [];
@@ -116,6 +125,9 @@ export class Autocomplete {
         this.open();
     }
 
+    // ------------------------------------------------------------
+    // RENDERING
+    // ------------------------------------------------------------
     private render() {
         this.listEl.empty();
 
@@ -175,6 +187,9 @@ export class Autocomplete {
         });
     }
 
+    // ------------------------------------------------------------
+    // POPUP CONTROL
+    // ------------------------------------------------------------
     private open() {
         if (this.isOpen) {
             this.popper?.update();
@@ -217,16 +232,19 @@ export class Autocomplete {
         }
     }
 
+    // ------------------------------------------------------------
+    // SELECTION + PREVIEW
+    // ------------------------------------------------------------
     private async choose(item: SuggestItem) {
         this.inputEl.value = item.label;
         this.onSelect(item);
         await this.close();
     }
+
     private async togglePreview(entry: FilteredEntry) {
         const { id, type } = entry.item;
         const ctrl = this.plugin.playbackController;
 
-        // If clicking the same item → stop preview and restore snapshot
         if (this.currentPreview === id) {
             ctrl.suppressRestore = false;
             await ctrl.exitPreviewMode();
@@ -235,13 +253,11 @@ export class Autocomplete {
             return;
         }
 
-        // Switching from one preview to another → DO NOT restore snapshot
         if (this.currentPreview) {
             ctrl.suppressRestore = true;
             await ctrl.exitPreviewMode();
         }
 
-        // Start new preview
         ctrl.suppressRestore = false;
         this.currentPreview = id;
         await ctrl.enterPreviewMode(id, type);
@@ -258,6 +274,9 @@ export class Autocomplete {
         this.currentPreview = null;
     }
 
+    // ------------------------------------------------------------
+    // HIGHLIGHTING
+    // ------------------------------------------------------------
     private highlight(label: string, matches: SearchMatches): DocumentFragment {
         const frag = document.createDocumentFragment();
         let lastIndex = 0;
@@ -280,5 +299,19 @@ export class Autocomplete {
         }
 
         return frag;
+    }
+
+    // ------------------------------------------------------------
+    // FULL DESTROY (for rebuild)
+    // ------------------------------------------------------------
+    public destroy() {
+        this.close();
+
+        document.removeEventListener("mousedown", this.onDocMouseDown);
+        this.inputEl.removeEventListener("input", this.onInput);
+        this.inputEl.removeEventListener("keydown", this.onKeyDown);
+        this.inputEl.removeEventListener("blur", this.onBlur);
+
+        this.popupEl.remove();
     }
 }

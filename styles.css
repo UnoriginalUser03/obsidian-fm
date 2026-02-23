@@ -117,7 +117,7 @@ button.obsidianfm-inline-btn {
 /* Disabled */
 button.obsidianfm-inline-btn.is-disabled {
   opacity: 0.5;
-  cursor: not-allowed;
+  cursor: not-allowed !important;
 }
 
 /* Hover */
@@ -409,6 +409,12 @@ button.obsidianfm-repeat-btn.is-active {
   cursor: pointer;
 }
 
+/* Grey out the entire player and block interaction */
+.obsidianfm-player-container.is-offline {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 /* Invisible hover zone (does NOT affect layout) */
 .obsidianfm-progress-container::before {
   content: "";
@@ -623,7 +629,8 @@ button.obsidianfm-repeat-btn.is-active {
 ------------------------------------------------------------ */
 .obsidianfm-disabled {
   opacity: 0.45;
-  pointer-events: none;
+  /* pointer-events: none; */
+  cursor: not-allowed !important;
   filter: grayscale(0.8);
 }
 

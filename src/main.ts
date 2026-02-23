@@ -1,4 +1,4 @@
-import { Notice, Plugin } from "obsidian";
+import { Events, Notice, Plugin } from "obsidian";
 import SettingsTab from "./Settings";
 
 import {
@@ -37,6 +37,9 @@ export default class ObsidianFMPlugin extends Plugin {
   // Cached maps
   soundMap: Map<string, Sound> = new Map();
   soundboardMap: Map<string, Soundboard> = new Map();
+
+  //Plugin Events
+  events: Events = new Events()
 
   // Connection state
   kenkuOnline = false;
@@ -254,7 +257,7 @@ export default class ObsidianFMPlugin extends Plugin {
       if (result.playOnce) {
         params.push(`playOnce="${result.playOnce}"`)
       }
-      if (result.shuffle) {
+      if (result.shuffle !== undefined) {
         params.push(`shuffle="${result.shuffle ? "true" : "false"}"`);
       }
     }

@@ -1,10 +1,9 @@
-// ui/player/PlayerSearch.ts
 import ObsidianFMPlugin from "src/main";
 import { Autocomplete } from "../autocomplete";
 import { SuggestItem } from "src/api/types";
-import { playSound } from "src/api/kenku";
 
 export class PlayerSearch {
+    private autocomplete: Autocomplete | null = null;
     private container: HTMLElement;
     private inputEl: HTMLInputElement;
 
@@ -20,11 +19,29 @@ export class PlayerSearch {
             placeholder: "Search music, playlists, and sounds...",
         }) as HTMLInputElement;
 
+        // Initial build
+        this.setupAutocomplete();
+
+        // Rebuild when Kenku comes back online
+        this.plugin.events.on("obsidian-fm:online", () => {
+            this.refreshAutocomplete();
+        });
+    }
+
+    // ------------------------------------------------------------
+    // REBUILD AUTOCOMPLETE SAFELY
+    // ------------------------------------------------------------
+    private refreshAutocomplete() {
+        if (this.autocomplete) {
+            this.autocomplete.destroy();   // <-- important: full teardown
+            this.autocomplete = null;
+        }
+
         this.setupAutocomplete();
     }
 
     // ------------------------------------------------------------
-    // AUTOCOMPLETE SETUP
+    // BUILD AUTOCOMPLETE INSTANCE
     // ------------------------------------------------------------
     private setupAutocomplete() {
         const items: SuggestItem[] = [
@@ -58,22 +75,16 @@ export class PlayerSearch {
             })),
         ];
 
-        const autocomplete = new Autocomplete(
+        this.autocomplete = new Autocomplete(
             this.plugin.app,
             this.plugin,
             this.inputEl,
             items,
 
-            // On select
             (item) => {
-                // Let the controller handle playback
                 this.plugin.playbackController.playByType(item.id, item.type);
-
-                // Clear input
                 this.inputEl.value = "";
-
-                // Close popup
-                autocomplete.close();
+                this.autocomplete?.close();
             }
         );
     }

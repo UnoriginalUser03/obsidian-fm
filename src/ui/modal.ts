@@ -9,6 +9,8 @@ export class ObsidianFMInsert extends Modal {
   onSubmit: (result: InsertResult) => void;
   mode: InsertMode;
 
+  private autocomplete: Autocomplete | null = null;
+
   // State
   private selectedId: string | null = null;
   private selectedType: InsertResult["type"] = null;
@@ -146,7 +148,7 @@ export class ObsidianFMInsert extends Modal {
     ------------------------------------------------------------ */
     const items = this.buildAutocompleteItems();
 
-    new Autocomplete(
+    this.autocomplete = new Autocomplete(
       this.app,
       this.plugin,
       searchInput,
@@ -466,6 +468,11 @@ export class ObsidianFMInsert extends Modal {
     if (this.previewing) {
       await ctrl.exitPreviewMode();
       this.previewing = false;
+    }
+
+    if (this.autocomplete) {
+      this.autocomplete.destroy();
+      this.autocomplete = null;
     }
 
     this.contentEl.empty();

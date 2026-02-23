@@ -25,7 +25,7 @@ export class SoundscapeButton extends InlineButton {
     const isActive = isSelected && hasPlaying;
 
     this.el.classList.toggle("is-playing", isActive);
-    this.el.disabled = !this.plugin.kenkuOnline;
+    this.el.classList.toggle("is-disabled", !this.plugin.kenkuOnline);
 
     const newIcon = isActive ? "square" : "play";
 

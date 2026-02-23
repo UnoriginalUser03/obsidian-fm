@@ -19,6 +19,8 @@ export class PlayerView extends ItemView {
   search: PlayerSearch;
   sfx: PlayerSFXPanel;
 
+  root: HTMLElement;
+
   constructor(leaf: WorkspaceLeaf, plugin: ObsidianFMPlugin) {
     super(leaf);
     this.plugin = plugin;
@@ -37,8 +39,16 @@ export class PlayerView extends ItemView {
     if (!this.plugin.views.includes(this)) {
       this.plugin.views.push(this);
     }
-
+    
     this.render();
+
+    this.plugin.events.on("obsidian-fm:offline", () => {
+      this.setOfflineState(true);
+    });
+
+    this.plugin.events.on("obsidian-fm:online", () => {
+      this.setOfflineState(false);
+    });
   }
 
   async onClose() {
@@ -52,16 +62,16 @@ export class PlayerView extends ItemView {
     const container = this.contentEl;
     container.empty();
 
-    const root = container.createDiv({
+    this.root = container.createDiv({
       cls: "obsidianfm-player-inner obsidianfm-player-container",
     });
 
     // Instantiate components
-    this.header = new PlayerHeader(this.plugin, root);
-    this.controls = new PlayerControls(this.plugin, root);
-    this.progress = new PlayerProgress(this.plugin, root);
-    this.search = new PlayerSearch(this.plugin, root);
-    this.sfx = new PlayerSFXPanel(this.plugin, root);
+    this.header = new PlayerHeader(this.plugin, this.root);
+    this.controls = new PlayerControls(this.plugin, this.root);
+    this.progress = new PlayerProgress(this.plugin, this.root);
+    this.search = new PlayerSearch(this.plugin, this.root);
+    this.sfx = new PlayerSFXPanel(this.plugin, this.root);
 
     // Initial UI update
     this.updateNonSfxUI();
@@ -82,6 +92,11 @@ export class PlayerView extends ItemView {
   updateSfxUI() {
     const s = this.plugin.playback;
     this.sfx.update(s);
+  }
+
+  setOfflineState(isOffline: boolean) {
+    if (!this.root) return;
+    this.root.classList.toggle("is-offline", isOffline);
   }
 
   // ------------------------------------------------------------
