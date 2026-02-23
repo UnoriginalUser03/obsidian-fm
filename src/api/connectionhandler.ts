@@ -6,6 +6,7 @@ import { InlineButtonRegistry } from "src/inline/inlinebuttonregistry";
 
 export class ConnectionHandler {
     private reconnecting = false;
+    private reconnectAttemptInFlight = false;
 
     constructor(
         private plugin: ObsidianFMPlugin,
@@ -89,20 +90,29 @@ export class ConnectionHandler {
         this.plugin.registerInterval(
             window.setInterval(async () => {
                 if (this.plugin.kenkuOnline) return;
+                if (this.reconnectAttemptInFlight) return; // <-- prevents backlog
+
+                this.reconnectAttemptInFlight = true;
 
                 try {
                     const alive = await pingKenkuFM(this.plugin.settings.baseUrl);
-                    if (!alive) return;
+
+                    if (!alive) {
+                        this.reconnectAttemptInFlight = false;
+                        return;
+                    }
 
                     await this.loadAllData();
 
                     this.plugin.kenkuOnline = true;
                     this.reconnecting = false;
+                    this.reconnectAttemptInFlight = false;
 
                     new Notice("KenkuFM Remote reconnected!");
                     this.plugin.inlineButtons.updateAll(performance.now());
                 } catch (e) {
                     console.warn("Reconnect attempt failed:", e);
+                    this.reconnectAttemptInFlight = false;
                 }
             }, 3000)
         );
