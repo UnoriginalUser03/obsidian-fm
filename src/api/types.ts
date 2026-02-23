@@ -94,6 +94,7 @@ export interface PlaybackSnapshot {
   sounds: string[];      // sound IDs currently playing
   playlistID: string | null;   // playlist IDs currently playing
   soundscapeID: string | null; // active soundscape IDs (usually 0 or 1)
+  trackProgress: number | null;
 }
 
 export interface InsertResult {

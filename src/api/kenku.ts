@@ -276,6 +276,22 @@ export const setSoundboardPlaybackStatus = async (
   }
 };
 
+export const seekTo = async (
+  baseUrl: string,
+  to: number
+): Promise<void> => {
+  try {
+    await requestUrl({
+      url: new URL('/v1/playlist/playback/seek', baseUrl).href,
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to })
+    })
+  } catch (e) {
+    console.warn("Could not seek to time:", e);
+  }
+}
+
 export const setPlayback = async (
   baseUrl: string,
   shuffle?: boolean,

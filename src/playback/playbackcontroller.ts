@@ -1,5 +1,5 @@
 // core/playback/PlaybackController.ts
-import { playSound, setNextTrack, setPlayback, setPlaylistPlayback, setPreviousTrack, setRepeat, setShuffle, stopSound } from "src/api/kenku";
+import { playSound, seekTo, setNextTrack, setPlayback, setPlaylistPlayback, setPreviousTrack, setRepeat, setShuffle, stopSound } from "src/api/kenku";
 import { MediaType, PlaybackSnapshot, RepeatMode, Sound } from "src/api/types";
 import { SoundscapeButton } from "src/inline/button types/soundscapebutton";
 import ObsidianFMPlugin from "src/main";
@@ -130,6 +130,15 @@ export class PlaybackController {
         this.updateUI();
     }
 
+    async seekPlayback(to: number) {
+        const s = this.state;
+        await seekTo(this.baseUrl, to);
+
+        s.trackProgress = to;
+        s.resetTrackBaseline(performance.now())
+        this.updateUI();
+    }
+
     // ------------------------------------------------------------
     // SOUNDSCAPE
     // ------------------------------------------------------------
@@ -232,6 +241,7 @@ export class PlaybackController {
             sounds: [...s.currentSounds.keys()],
             playlistID: s.currentPlaylistId,
             soundscapeID: s.currentSoundscapeId,
+            trackProgress: s.trackProgress
         };
     }
 
@@ -244,6 +254,11 @@ export class PlaybackController {
             await playSound(this.baseUrl, snapshot.track, "track");
             s.currentTrackId = snapshot.track;
             s.currentPlaylistId = snapshot.playlistID;
+
+            if(snapshot.trackProgress) {
+                await seekTo(this.baseUrl, snapshot.trackProgress);
+            }
+
             restoredSomething = true;
         }
 

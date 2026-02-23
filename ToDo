@@ -3,3 +3,8 @@
 + Apply changes to playback overwrite settings when resuming track after edits
 + Investigate sync issues between Kenku and Obisidian
 + Expand on offline mode - no editing, or storing last known sounds. 
++ Add seek 
+
+curl -X PUT "http://127.0.0.1:3333/v1/playlist/playback/seek" ^
+  -H "Content-Type: application/json" ^
+  -d "{ \"to\": \"10\" }"
