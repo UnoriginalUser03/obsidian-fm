@@ -96,7 +96,7 @@ export class InlineButtonRegistry {
     for (const btn of this.buttons) {
       switch (btn.type) {
         case "track":
-          btn.isValid = this.plugin.soundMap.has(btn.id);
+          btn.isValid = this.plugin.music.some(t => t.id === btn.id);
           break;
 
         case "playlist":
@@ -124,7 +124,7 @@ export class InlineButtonRegistry {
   private validateButton(btn: InlineButton) {
     switch (btn.type) {
       case "track":
-        btn.isValid = this.plugin.soundMap.has(btn.id);
+        btn.isValid = this.plugin.music.some(t => t.id === btn.id);
         break;
 
       case "playlist":
