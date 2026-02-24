@@ -26,14 +26,30 @@ export class PlaylistButton extends InlineButton {
     const isPaused = isCurrent && s.paused;
     const isPlaying = isCurrent && !s.paused;
 
+    // Apply disabled state (offline or invalid)
+    this.applyDisabledState();
+
+    // Tooltip: offline handled here
+    if (this.applyBaseTooltip()) return;
+
+    // Tooltip + icon: invalid handled here
+    if (this.applyWarningIconIfInvalid()) {
+      this.el.title = "Playlist not found in KenkuFM";
+      return;
+    }
+
+    // Valid tooltip
+    this.el.title = "Play playlist";
+
+    // Playback classes
     this.el.classList.toggle("is-playing", isPlaying);
     this.el.classList.toggle("is-paused", isPaused);
-    this.el.classList.toggle("is-disabled", !this.plugin.kenkuOnline);
 
+    // Icon logic
     const newIcon =
       isPaused ? "play" :
-        isPlaying ? "pause" :
-          "play";
+      isPlaying ? "pause" :
+      "play";
 
     if (this.iconEl.dataset.currentIcon !== newIcon) {
       this.iconEl.dataset.currentIcon = newIcon;
@@ -88,10 +104,10 @@ export class PlaylistButton extends InlineButton {
   }
 
   // ------------------------------------------------------------
-  // CLICK HANDLER (now uses PlaybackController)
+  // CLICK HANDLER
   // ------------------------------------------------------------
   async handleClick() {
-    if (!this.plugin.kenkuOnline) return;
+    if (!this.plugin.kenkuOnline || !this.isValid) return;
 
     const ctrl = this.plugin.playbackController;
     const s = this.plugin.playback;

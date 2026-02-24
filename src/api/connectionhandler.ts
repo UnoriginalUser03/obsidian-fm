@@ -5,6 +5,7 @@ import { getMusic, getPlaylists, getSoundboards, getSounds, pingKenkuFM } from "
 import { InlineButtonRegistry } from "src/inline/inlinebuttonregistry";
 
 export class ConnectionHandler {
+    private reconnectInterval: number | null = null;
     private reconnecting = false;
     private reconnectAttemptInFlight = false;
 
@@ -35,7 +36,7 @@ export class ConnectionHandler {
 
             new Notice("KenkuFM Remote connected!");
             this.plugin.events.trigger("obsidian-fm:online");
-            this.registry.updateAll(performance.now());
+            this.plugin.inlineButtons.refreshValidity();
         } catch (e) {
             console.error(e);
             this.handleDisconnect();
@@ -91,36 +92,41 @@ export class ConnectionHandler {
         if (this.reconnecting) return;
         this.reconnecting = true;
 
-        this.plugin.registerInterval(
-            window.setInterval(async () => {
-                if (this.plugin.kenkuOnline) return;
-                if (this.reconnectAttemptInFlight) return; // <-- prevents backlog
+        this.reconnectInterval = window.setInterval(async () => {
+            if (this.reconnectAttemptInFlight) return;
 
-                this.reconnectAttemptInFlight = true;
+            this.reconnectAttemptInFlight = true;
 
-                try {
-                    const alive = await pingKenkuFM(this.plugin.settings.baseUrl);
+            try {
+                const alive = await pingKenkuFM(this.plugin.settings.baseUrl);
 
-                    if (!alive) {
-                        this.reconnectAttemptInFlight = false;
-                        return;
-                    }
-
-                    await this.loadAllData();
-
-                    this.plugin.kenkuOnline = true;
-
-                    this.reconnecting = false;
+                if (!alive) {
                     this.reconnectAttemptInFlight = false;
-
-                    new Notice("KenkuFM Remote reconnected!");
-                    this.plugin.events.trigger("obsidian-fm:online");
-                    this.plugin.inlineButtons.updateAll(performance.now());
-                } catch (e) {
-                    console.warn("Reconnect attempt failed:", e);
-                    this.reconnectAttemptInFlight = false;
+                    return;
                 }
-            }, 3000)
-        );
+
+                await this.loadAllData();
+
+                this.plugin.kenkuOnline = true;
+                this.reconnecting = false;
+                this.reconnectAttemptInFlight = false;
+
+                new Notice("KenkuFM Remote reconnected!");
+                this.plugin.events.trigger("obsidian-fm:online");
+                this.plugin.inlineButtons.refreshValidity();
+
+                // 🔥 STOP THE LOOP
+                if (this.reconnectInterval) {
+                    clearInterval(this.reconnectInterval);
+                    this.reconnectInterval = null;
+                }
+
+            } catch (e) {
+                console.warn("Reconnect attempt failed:", e);
+                this.reconnectAttemptInFlight = false;
+            }
+        }, 2000);
+
+        this.plugin.registerInterval(this.reconnectInterval);
     }
 }

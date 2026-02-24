@@ -243,7 +243,15 @@ button.obsidianfm-inline-btn.is-paused .obsidianfm-inline-icon {
   text-overflow: ellipsis;
 }
 
+.obsidianfm-inline-error {
+  opacity: 0.6;
+  border: 2px solid var(--color-red) !important;
+  color: var(--color-red);
+}
 
+.obsidianfm-inline-error .obsidianfm-inline-icon {
+  color: var(--color-red);
+}
 /* ===================================================== */
 /*                  VOLUME CONTROLS                      */
 /* ===================================================== */
@@ -391,7 +399,6 @@ button.obsidianfm-repeat-btn.is-active {
 .obsidianfm-play-pause-icon svg {
   width: 32px;
   height: 32px;
-  color: var(--text-on-accent);
 }
 
 
@@ -641,6 +648,7 @@ button.obsidianfm-repeat-btn.is-active {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  text-align: center;
   padding: 6px 10px;
   margin-bottom: 6px;
   background: var(--background-primary);
@@ -658,6 +666,17 @@ button.obsidianfm-repeat-btn.is-active {
 
 .stack-row button:hover {
   color: var(--text-normal);
+}
+
+.stack-row-error {
+  border: 2px solid var(--text-error);
+}
+
+.stack-error-icon {
+  color: var(--text-error);
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
 }
 
 /* ------------------------------------------------------------

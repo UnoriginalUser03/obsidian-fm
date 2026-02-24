@@ -24,9 +24,25 @@ export class SoundscapeButton extends InlineButton {
     const hasPlaying = this.stackIds.some(id => s.currentSounds.has(id));
     const isActive = isSelected && hasPlaying;
 
-    this.el.classList.toggle("is-playing", isActive);
-    this.el.classList.toggle("is-disabled", !this.plugin.kenkuOnline);
+    // Apply disabled state (offline or invalid)
+    this.applyDisabledState();
 
+    // Tooltip: offline handled here
+    if (this.applyBaseTooltip()) return;
+
+    // Tooltip + icon: invalid handled here
+    if (this.applyWarningIconIfInvalid()) {
+      this.el.title = "One or more sounds in this soundscape were not found in KenkuFM";
+      return;
+    }
+
+    // Valid tooltip
+    this.el.title = "Play soundscape";
+
+    // Playback classes
+    this.el.classList.toggle("is-playing", isActive);
+
+    // Icon logic
     const newIcon = isActive ? "square" : "play";
 
     if (this.iconEl.dataset.currentIcon !== newIcon) {
@@ -44,7 +60,7 @@ export class SoundscapeButton extends InlineButton {
     const isSelected = s.currentSoundscapeId === this.id;
     const hasPlaying = this.stackIds.some(id => s.currentSounds.has(id));
 
-    if (!isSelected || !hasPlaying) {
+    if (!isSelected || !hasPlaying || !this.isValid) {
       if (this.el.dataset.progress !== "0%") {
         this.el.dataset.progress = "0%";
         this.el.style.setProperty("--progress", "0%");
@@ -104,10 +120,10 @@ export class SoundscapeButton extends InlineButton {
   }
 
   // ------------------------------------------------------------
-  // CLICK HANDLER (now uses PlaybackController)
+  // CLICK HANDLER
   // ------------------------------------------------------------
   async handleClick() {
-    if (!this.plugin.kenkuOnline) return;
+    if (!this.plugin.kenkuOnline || !this.isValid) return;
 
     const ctrl = this.plugin.playbackController;
     const s = this.plugin.playback;
@@ -118,10 +134,8 @@ export class SoundscapeButton extends InlineButton {
 
     try {
       if (isActive) {
-        // Stop this soundscape
         await ctrl.stopSoundscape(this.id);
       } else {
-        // Start this soundscape
         await ctrl.playSoundscape(this.id, this.stackIds);
       }
     } catch {

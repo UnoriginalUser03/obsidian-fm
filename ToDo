@@ -1,7 +1,4 @@
 + Implement play once? 
-+ Clean up old inline references on update (replace entire snippet)
-+ Figure out what to do with players that lose references. (Show error?)
-
 
 + Sync has to do with Kenku keeping stale data. Fixed autocomplete. Syncing requires Kenku restart 
 

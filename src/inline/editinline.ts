@@ -6,7 +6,7 @@ import { ObsidianFMInsert } from "src/ui/modal";
 import { EditorView, ViewPlugin, ViewUpdate, Decoration, DecorationSet, WidgetType } from "@codemirror/view";
 import { RangeSetBuilder } from "@codemirror/state";
 
-const INLINE_REGEX = /`obsidianfm:([^`]+)`/g;
+const INLINE_REGEX = /\u200B?`obsidianfm:([^`]+)`\u200B?/g;
 
 class ObsidianFMEditWidget extends WidgetType {
     constructor(
@@ -35,6 +35,9 @@ class ObsidianFMEditWidget extends WidgetType {
         // Clone the real button to strip playback listeners
         const cleanBtn = realBtn.el.cloneNode(true) as HTMLElement;
 
+        if (cleanBtn.hasClass("obsidianfm-error")) {
+            cleanBtn.classList.remove("obsidianfm-error");
+        }
 
         // Add tooltip
         cleanBtn.setAttribute("aria-label", "Edit ObsidianFM Player");
@@ -75,7 +78,14 @@ class ObsidianFMEditWidget extends WidgetType {
                     );
                 },
                 mode as any,
-                config
+                config,
+                () => {
+                    editor.replaceRange(
+                        "",
+                        editor.offsetToPos(this.from),
+                        editor.offsetToPos(this.to)
+                    )
+                }
             );
 
             modal.open();
@@ -134,6 +144,7 @@ class ObsidianFMEditInlinePlugin {
                 const widget = Decoration.replace({
                     widget: new ObsidianFMEditWidget(this.plugin, raw, matchStart, matchEnd),
                     inclusive: false,
+                    key: this.plugin.kenkuOnline ? "online" : "offline"
                 });
 
                 builder.add(matchStart, matchEnd, widget);

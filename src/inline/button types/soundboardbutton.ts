@@ -23,6 +23,23 @@ export class SoundboardButton extends InlineButton {
   updateState() {
     const s = this.plugin.playback;
     const board = this.plugin.soundboardMap.get(this.id);
+
+    // Apply disabled state (offline or invalid)
+    this.applyDisabledState();
+
+    // Tooltip: offline handled here
+    if (this.applyBaseTooltip()) return;
+
+    // Tooltip + icon: invalid handled here
+    if (this.applyWarningIconIfInvalid()) {
+      this.el.title = "Soundboard not found in KenkuFM";
+      return;
+    }
+
+    // Valid tooltip
+    this.el.title = "Play soundboard";
+
+    // If board missing (shouldn't happen if valid), bail safely
     if (!board) return;
 
     const playingCount = board.sounds.filter(id => s.currentSounds.has(id)).length;
@@ -30,8 +47,8 @@ export class SoundboardButton extends InlineButton {
     const allPlaying = playingCount === board.sounds.length;
 
     this.el.classList.toggle("is-playing", hasPlaying);
-    this.el.classList.toggle("is-disabled", !this.plugin.kenkuOnline);
 
+    // Icon logic
     let newIcon: string;
 
     if (this.overlapping) {
@@ -49,12 +66,17 @@ export class SoundboardButton extends InlineButton {
   }
 
   // ------------------------------------------------------------
-  // PROGRESS UPDATE (unchanged)
+  // PROGRESS UPDATE
   // ------------------------------------------------------------
   updateProgress(now: number) {
     const s = this.plugin.playback;
     const board = this.plugin.soundboardMap.get(this.id);
-    if (!board) return;
+
+    if (!board || !this.isValid) {
+      this.el.dataset.progress = "0%";
+      this.el.style.setProperty("--progress", "0%");
+      return;
+    }
 
     const active = board.sounds
       .map(id => {
@@ -98,10 +120,10 @@ export class SoundboardButton extends InlineButton {
   }
 
   // ------------------------------------------------------------
-  // CLICK HANDLER (now uses PlaybackController)
+  // CLICK HANDLER
   // ------------------------------------------------------------
   async handleClick() {
-    if (!this.plugin.kenkuOnline) return;
+    if (!this.plugin.kenkuOnline || !this.isValid) return;
 
     const ctrl = this.plugin.playbackController;
     const s = this.plugin.playback;
@@ -113,9 +135,7 @@ export class SoundboardButton extends InlineButton {
     const allPlaying = playing.length === board.sounds.length;
 
     try {
-      // ------------------------------------------------------------
       // NON-OVERLAPPING MODE
-      // ------------------------------------------------------------
       if (!this.overlapping) {
         if (hasPlaying) {
           await ctrl.stopEntireSoundboard(this.id);
@@ -135,9 +155,7 @@ export class SoundboardButton extends InlineButton {
         return;
       }
 
-      // ------------------------------------------------------------
       // OVERLAPPING MODE
-      // ------------------------------------------------------------
       if (allPlaying) {
         await ctrl.stopEntireSoundboard(this.id);
         return;

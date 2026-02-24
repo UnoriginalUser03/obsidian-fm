@@ -26,14 +26,30 @@ export class TrackButton extends InlineButton {
     const isPaused = isCurrent && s.paused;
     const isPlaying = isCurrent && !s.paused;
 
+    // Apply disabled state (offline or invalid)
+    this.applyDisabledState();
+
+    // Tooltip: offline handled here
+    if (this.applyBaseTooltip()) return;
+
+    // Tooltip + icon: invalid handled here
+    if (this.applyWarningIconIfInvalid()) {
+      this.el.title = "Track not found in KenkuFM";
+      return;
+    }
+
+    // Valid tooltip
+    this.el.title = "Play track";
+
+    // Playback classes
     this.el.classList.toggle("is-playing", isPlaying);
     this.el.classList.toggle("is-paused", isPaused);
-    this.el.classList.toggle("is-disabled", !this.plugin.kenkuOnline);
 
+    // Icon logic
     const newIcon =
       isPaused ? "play" :
-        isPlaying ? "pause" :
-          "play";
+      isPlaying ? "pause" :
+      "play";
 
     if (this.iconEl.dataset.currentIcon !== newIcon) {
       this.iconEl.dataset.currentIcon = newIcon;
@@ -96,10 +112,10 @@ export class TrackButton extends InlineButton {
   }
 
   // ------------------------------------------------------------
-  // CLICK HANDLER (now uses PlaybackController)
+  // CLICK HANDLER
   // ------------------------------------------------------------
   async handleClick() {
-    if (!this.plugin.kenkuOnline) return;
+    if (!this.plugin.kenkuOnline || !this.isValid) return;
 
     const ctrl = this.plugin.playbackController;
     const s = this.plugin.playback;
@@ -108,7 +124,6 @@ export class TrackButton extends InlineButton {
 
     try {
       if (isCurrent) {
-        // Toggle pause/resume
         if (s.paused) {
           await ctrl.Resume({
             shuffle: this.shuffle,
@@ -119,7 +134,6 @@ export class TrackButton extends InlineButton {
           await ctrl.Pause();
         }
       } else {
-        // Play new track with optional settings
         await ctrl.playTrack(this.id, {
           shuffle: this.shuffle,
           repeat: this.repeat,

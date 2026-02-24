@@ -78,7 +78,7 @@ export class InlineButtonRegistry {
         console.warn("Unknown inline type:", type);
         return null;
     }
-
+    this.validateButton(btn);
     this.buttons.add(btn);
     return btn;
   }
@@ -90,6 +90,60 @@ export class InlineButtonRegistry {
       }
     }
     return null;
+  }
+
+  refreshValidity() {
+    for (const btn of this.buttons) {
+      switch (btn.type) {
+        case "track":
+          btn.isValid = this.plugin.soundMap.has(btn.id);
+          break;
+
+        case "playlist":
+          btn.isValid = this.plugin.playlists.some(p => p.id === btn.id);
+          break;
+
+        case "sound":
+          btn.isValid = this.plugin.soundMap.has(btn.id);
+          break;
+
+        case "soundboard":
+          btn.isValid = this.plugin.soundboardMap.has(btn.id);
+          break;
+
+        case "soundscape":
+          const sc = btn as SoundscapeButton;
+          btn.isValid = sc.stackIds.every(id => this.plugin.soundMap.has(id));
+          break;
+      }
+    }
+
+    this.updateAll(performance.now());
+  }
+
+  private validateButton(btn: InlineButton) {
+    switch (btn.type) {
+      case "track":
+        btn.isValid = this.plugin.soundMap.has(btn.id);
+        break;
+
+      case "playlist":
+        btn.isValid = this.plugin.playlists.some(p => p.id === btn.id);
+        break;
+
+      case "sound":
+        btn.isValid = this.plugin.soundMap.has(btn.id);
+        break;
+
+      case "soundboard":
+        btn.isValid = this.plugin.soundboardMap.has(btn.id);
+        break;
+
+      case "soundscape":
+        const sc = btn as SoundscapeButton;
+        btn.isValid = sc.stackIds.every(id => this.plugin.soundMap.has(id));
+        break;
+    }
   }
 
   // ------------------------------------------------------------

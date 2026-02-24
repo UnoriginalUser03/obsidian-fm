@@ -18,12 +18,27 @@ export class SoundButton extends InlineButton {
   // ------------------------------------------------------------
   updateState() {
     const s = this.plugin.playback;
-
     const isPlaying = s.currentSounds.has(this.id);
 
-    this.el.classList.toggle("is-playing", isPlaying);
-    this.el.classList.toggle("is-disabled", !this.plugin.kenkuOnline);
+    // Apply disabled state (offline or invalid)
+    this.applyDisabledState();
 
+    // Tooltip: offline handled here
+    if (this.applyBaseTooltip()) return;
+
+    // Tooltip + icon: invalid handled here
+    if (this.applyWarningIconIfInvalid()) {
+      this.el.title = "Sound not found in KenkuFM";
+      return;
+    }
+
+    // Valid tooltip
+    this.el.title = "Play sound";
+
+    // Playback class
+    this.el.classList.toggle("is-playing", isPlaying);
+
+    // Icon logic
     const newIcon = isPlaying ? "square" : "play";
 
     if (this.iconEl.dataset.currentIcon !== newIcon) {
@@ -39,7 +54,7 @@ export class SoundButton extends InlineButton {
     const s = this.plugin.playback;
     const entry = s.currentSounds.get(this.id);
 
-    if (!entry) {
+    if (!entry || !this.isValid) {
       if (this.el.dataset.progress !== "0%") {
         this.el.dataset.progress = "0%";
         this.el.style.setProperty("--progress", "0%");
@@ -82,10 +97,10 @@ export class SoundButton extends InlineButton {
   }
 
   // ------------------------------------------------------------
-  // CLICK HANDLER (now uses PlaybackController)
+  // CLICK HANDLER
   // ------------------------------------------------------------
   async handleClick() {
-    if (!this.plugin.kenkuOnline) return;
+    if (!this.plugin.kenkuOnline || !this.isValid) return;
 
     const ctrl = this.plugin.playbackController;
     const s = this.plugin.playback;

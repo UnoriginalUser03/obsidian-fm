@@ -67,6 +67,12 @@ export default class ObsidianFMPlugin extends Plugin {
     await this.loadSettings();
     this.addSettingTab(new SettingsTab(this.app, this));
 
+    this.registerEvent(
+      this.events.on("obsidian-fm:online", () => {
+        this.app.workspace.trigger("layout-change");
+      })
+    );
+
     // Core systems
     this.playback = new PlaybackState();
     this.inlineButtons = new InlineButtonRegistry(this, this.playback);
@@ -81,7 +87,7 @@ export default class ObsidianFMPlugin extends Plugin {
     this.playbackController = new PlaybackController(this);
 
     // Initial connection
-    await this.connection.connect();
+    this.connection.connect();
 
     // Commands
     this.addCommand({
@@ -155,13 +161,18 @@ export default class ObsidianFMPlugin extends Plugin {
                 return;
               }
 
+              const raw = editor.getSelection();
+              const trimmed = raw.trim();
+              const initialConfig = trimmed.length > 0 ? { title: trimmed } : undefined;
+
               new ObsidianFMInsert(
                 this.app,
                 this,
                 (result) => {
                   editor.replaceSelection(this.buildInlineCode(result));
                 },
-                "normal"
+                "normal",
+                initialConfig
               ).open();
             });
         });
@@ -177,13 +188,18 @@ export default class ObsidianFMPlugin extends Plugin {
                 return;
               }
 
+              const raw = editor.getSelection();
+              const trimmed = raw.trim();
+              const initialConfig = trimmed.length > 0 ? { title: trimmed } : undefined;
+
               new ObsidianFMInsert(
                 this.app,
                 this,
                 (result) => {
                   editor.replaceSelection(this.buildInlineCode(result));
                 },
-                "soundscape"
+                "soundscape",
+                initialConfig
               ).open();
             });
         });
@@ -245,7 +261,7 @@ export default class ObsidianFMPlugin extends Plugin {
     if (result.trackId) params.push(`id="${result.trackId}"`);
     if (result.type) params.push(`type="${result.type}"`);
 
-    if (result.overrideSettings) {
+    if (result.overrideSettings && (result.type === "track" || result.type === "playlist")) {
       params.push(`overrideSettings="${result.overrideSettings ? "true" : "false"}"`)
       if (result.repeat) {
         params.push(`repeat="${result.repeat}"`);
@@ -275,7 +291,7 @@ export default class ObsidianFMPlugin extends Plugin {
       params.push(`stack="${result.stack.map((s) => s.id).join(",")}"`);
     }
 
-    return `\`obsidianfm: ${params.join(" ")}\``;
+    return `\u200B\`obsidianfm: ${params.join(" ")}\`\u200B`;
   }
 
   public parseInlineKenku(raw: string): Record<string, string> {

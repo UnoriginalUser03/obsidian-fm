@@ -367,10 +367,18 @@ export const stopSound = async (
 
 // ---------------- PING ----------------
 export const pingKenkuFM = async (baseUrl: string): Promise<boolean> => {
-  try {
-    const playback = await getPlaylistPlaybackStatus(baseUrl);
-    return playback !== null;
-  } catch {
-    return false;
-  }
+  const timeoutPromise = new Promise<boolean>(resolve =>
+    setTimeout(() => resolve(false), 500)
+  );
+
+  const pingPromise = (async () => {
+    try {
+      const playback = await getPlaylistPlaybackStatus(baseUrl);
+      return playback !== null;
+    } catch {
+      return false;
+    }
+  })();
+
+  return Promise.race([timeoutPromise, pingPromise]);
 };

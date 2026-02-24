@@ -7,6 +7,7 @@ import { InsertMode, InsertResult, MediaType, RepeatMode, SuggestItem } from "sr
 export class ObsidianFMInsert extends Modal {
   plugin: ObsidianFMPlugin;
   onSubmit: (result: InsertResult) => void;
+  onDelete?: () => void;
   mode: InsertMode;
 
   private autocomplete: Autocomplete | null = null;
@@ -33,12 +34,14 @@ export class ObsidianFMInsert extends Modal {
     plugin: ObsidianFMPlugin,
     onSubmit: (result: InsertResult) => void,
     mode: InsertMode = "normal",
-    initialConfig?: Record<string, string>
+    initialConfig?: Record<string, string>,
+    onDelete?: () => void,
   ) {
     super(app);
     this.plugin = plugin;
     this.onSubmit = onSubmit;
     this.mode = mode;
+    this.onDelete = onDelete;
 
     if (initialConfig) {
       this.applyInitialConfig(initialConfig);
@@ -232,12 +235,26 @@ export class ObsidianFMInsert extends Modal {
     /* ------------------------------------------------------------
        INSERT / SAVE BUTTON
     ------------------------------------------------------------ */
-    new Setting(contentEl)
-      .addButton(btn => {
-        btn.setButtonText(this.selectedId ? "Save" : "Insert")
-          .setCta()
-          .onClick(() => this.handleInsert(detailsSection));
+    const row = new Setting(contentEl);
+
+    // DELETE (left)
+    if (this.onDelete) {
+      row.addButton(btn => {
+        btn.setButtonText("Delete")
+          .setWarning()
+          .onClick(() => {
+            this.close();
+            this.onDelete?.();
+          });
       });
+    }
+
+    // SAVE (right)
+    row.addButton(btn => {
+      btn.setButtonText(this.selectedId ? "Save" : "Insert")
+        .setCta()
+        .onClick(() => this.handleInsert(detailsSection));
+    });
   }
 
   // ------------------------------------------------------------
@@ -406,10 +423,24 @@ export class ObsidianFMInsert extends Modal {
 
     this.stack.forEach((s, i) => {
       const row = container.createDiv({ cls: "stack-row" });
+      const isValid = this.plugin.soundMap.has(s.id);
 
+      // Apply error styling
+      row.classList.toggle("stack-row-error", !isValid);
+
+      // Error icon (only when invalid)
+      if (!isValid) {
+        const errorIcon = row.createDiv({ cls: "stack-error-icon" });
+        setIcon(errorIcon, "triangle-alert");
+        errorIcon.setAttribute("aria-label", "Invalid sound ID");
+        errorIcon.setAttribute("title", "This sound ID does not exist in KenkuFM");
+      }
+
+      // Label
       const label = row.createDiv({ cls: "stack-label" });
       label.setText(`${i + 1}. ${s.label}`);
 
+      // Remove button
       const removeBtn = row.createEl("button", {
         cls: "stack-remove-btn",
       });
@@ -437,6 +468,7 @@ export class ObsidianFMInsert extends Modal {
 
       this.close();
       this.onSubmit({ stack: this.stack, title: this.label, type: "soundscape" });
+
       return;
     }
 
@@ -459,7 +491,6 @@ export class ObsidianFMInsert extends Modal {
       volume: this.volume,
       overrideSettings: this.overrideSettings,
     });
-
   }
 
   onClose = async () => {
