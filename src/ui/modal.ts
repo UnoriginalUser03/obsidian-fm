@@ -21,7 +21,6 @@ export class ObsidianFMInsert extends Modal {
   private repeat: RepeatMode = "off";
   private shuffle = false;
   private overlapping = false;
-  private playOnce = false;
   private random = false;
   private volume = 1;
   private overrideSettings = false;
@@ -57,7 +56,6 @@ export class ObsidianFMInsert extends Modal {
     // Playback settings
     if (config.repeat) this.repeat = config.repeat as RepeatMode;
     if (config.shuffle) this.shuffle = config.shuffle === "true";
-    if (config.playOnce) this.playOnce = config.playOnce === "true";
     if (config.volume) this.volume = Number(config.volume);
     if (config.overrideSettings) this.overrideSettings = config.overrideSettings === "true";
 
@@ -364,14 +362,6 @@ export class ObsidianFMInsert extends Modal {
         .setDesc("Shuffle playback order.")
         .addToggle(t => t.setValue(this.shuffle).onChange(v => this.shuffle = v));
 
-      // Play Once (track only) need to implement
-      // if (item.type === "track") {
-      //   new Setting(innerBlock)
-      //     .setName("Play Once")
-      //     .setDesc("Play the track once, then stop.")
-      //     .addToggle(t => t.setValue(this.playOnce).onChange(v => this.playOnce = v));
-      // }
-
       // Volume
       new Setting(innerBlock)
         .setName("Volume")
@@ -487,7 +477,6 @@ export class ObsidianFMInsert extends Modal {
       overlapping: this.overlapping,
       shuffle: this.shuffle,
       repeat: this.repeat,
-      playOnce: this.playOnce,
       volume: this.volume,
       overrideSettings: this.overrideSettings,
     });

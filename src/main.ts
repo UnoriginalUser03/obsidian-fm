@@ -270,9 +270,7 @@ export default class ObsidianFMPlugin extends Plugin {
       if (result.volume !== undefined) {
         params.push(`volume="${result.volume}"`);
       }
-      if (result.playOnce) {
-        params.push(`playOnce="${result.playOnce}"`)
-      }
+
       if (result.shuffle !== undefined) {
         params.push(`shuffle="${result.shuffle ? "true" : "false"}"`);
       }

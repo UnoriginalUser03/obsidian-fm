@@ -108,7 +108,6 @@ export interface InsertResult {
   shuffle?: boolean;
   random?: boolean;
   overlapping?: boolean;
-  playOnce?: boolean;
   volume?: number;
 }
 
