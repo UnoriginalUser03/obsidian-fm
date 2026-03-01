@@ -30,6 +30,20 @@ export interface Track {
   playlistName: string;
 }
 
+export type SoundscapeItem =
+    {
+      type: "loop";
+      id: string;
+      label: string;
+    }
+  | {
+      type: "random-group";
+      label: string;
+      ids: string[];
+      min: number;
+      max: number;
+    };
+
 export interface SoundboardApiResponse {
   soundboards: [
     {
@@ -51,6 +65,11 @@ export interface SoundboardApiResponse {
     }
   ];
 }
+
+export interface PreviewItem {
+  id: string; 
+  type: MediaType;
+} 
 
 export interface SoundboardPlaybackApiResponse {
   sounds: [
@@ -102,7 +121,7 @@ export interface InsertResult {
   trackTitle?: string;
   trackId?: string;
   type?: MediaType;
-  stack?: { id: string; label: string }[];
+  stack?: SoundscapeItem[];
   overrideSettings?: boolean;
   repeat?: "off" | "playlist" | "track" | "default";
   shuffle?: boolean;

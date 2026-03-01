@@ -1,5 +1,5 @@
 import ObsidianFMPlugin from "src/main";
-import { Autocomplete } from "../autocomplete";
+import { Autocomplete } from "../search/autocomplete";
 import { SuggestItem } from "src/api/types";
 
 export class PlayerSearch {
@@ -80,7 +80,6 @@ export class PlayerSearch {
             this.plugin,
             this.inputEl,
             items,
-
             (item) => {
                 this.plugin.playbackController.playByType(item.id, item.type);
                 this.inputEl.value = "";

@@ -1,4 +1,9 @@
-+ Implement play once? 
++ Update modal preview button depending on whether or not it is playing 
++ Error handling for stacks and random items. 
++ Add preview for random sounds. 
++ ui optimisations for modal random group 
++ Reloading plugin can cause random timers to stick. 
++ Stop random timers and add preview modes
++ Disallow editing when button is playing. 
 
 + Sync has to do with Kenku keeping stale data. Fixed autocomplete. Syncing requires Kenku restart 
-

@@ -1,6 +1,5 @@
-import { RepeatMode } from "src/api/types";
+import { RepeatMode, MediaType, PreviewItem } from "src/api/types";
 
-// core/playback/PlaybackState.ts
 export class PlaybackState {
   // Track / playlist
   currentTrackId: string | null = null;
@@ -12,6 +11,10 @@ export class PlaybackState {
     string,
     { progress: number; duration: number; frozen?: boolean }
   > = new Map();
+
+  // Preview
+  previewing: boolean = false;
+  previewItems: PreviewItem[] = [];
 
   // Playback flags
   paused = false;

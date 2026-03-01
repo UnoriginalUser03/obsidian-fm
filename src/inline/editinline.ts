@@ -1,10 +1,11 @@
 // src/inline/edit-inline-extension.ts
 import { App, MarkdownView, setIcon } from "obsidian";
 import ObsidianFMPlugin from "src/main";
-import { ObsidianFMInsert } from "src/ui/modal";
 
 import { EditorView, ViewPlugin, ViewUpdate, Decoration, DecorationSet, WidgetType } from "@codemirror/view";
 import { RangeSetBuilder } from "@codemirror/state";
+import { SoundscapeInsertModal } from "src/ui/modal/soundscapeinsertmodal";
+import { InlinePlayerInsertModal } from "src/ui/modal/inlineplayerinsertmodal";
 
 const INLINE_REGEX = /\u200B?`obsidianfm:([^`]+)`\u200B?/g;
 
@@ -66,7 +67,7 @@ class ObsidianFMEditWidget extends WidgetType {
             const editor = mdView.editor;
             const mode = config["stack"] ? "soundscape" : "normal";
 
-            const modal = new ObsidianFMInsert(
+            const modal = mode == "normal" ? new InlinePlayerInsertModal(
                 this.plugin.app,
                 this.plugin,
                 (result) => {
@@ -77,15 +78,33 @@ class ObsidianFMEditWidget extends WidgetType {
                         editor.offsetToPos(this.to)
                     );
                 },
-                mode as any,
-                config,
                 () => {
                     editor.replaceRange(
                         "",
                         editor.offsetToPos(this.from),
                         editor.offsetToPos(this.to)
                     )
-                }
+                },
+                config
+            ) : new SoundscapeInsertModal(
+                this.plugin.app,
+                this.plugin,
+                (result) => {
+                    const newCode = this.plugin["buildInlineCode"](result);
+                    editor.replaceRange(
+                        newCode,
+                        editor.offsetToPos(this.from),
+                        editor.offsetToPos(this.to)
+                    );
+                },
+                () => {
+                    editor.replaceRange(
+                        "",
+                        editor.offsetToPos(this.from),
+                        editor.offsetToPos(this.to)
+                    )
+                },
+                config
             );
 
             modal.open();

@@ -1,5 +1,3 @@
-// core/playback/PlaybackSync.ts
-
 import ObsidianFMPlugin from "src/main";
 import {
   getPlaylistPlaybackStatus,
@@ -15,7 +13,7 @@ export class PlaybackSync {
     private plugin: ObsidianFMPlugin,
     private state: PlaybackState,
     private registry: InlineButtonRegistry
-  ) {}
+  ) { }
 
   // ------------------------------------------------------------
   // START SYNC LOOP
@@ -124,23 +122,51 @@ export class PlaybackSync {
       this.state.muted = playback.muted ?? false;
 
       // --------------------------------------------------------
-      // NOTIFY UI
+      // PREVIEW END DETECTION
       // --------------------------------------------------------
-      this.plugin.views.forEach((v) => {
-        v.resetInterpolationBaselines();
-        v.updateNonSfxUI();
-        v.updateSfxUI();
-      });
+      if (this.state.previewing) {
+        const activePreviewSfx = this.state.previewItems
+          .filter(p => p.type === "sound")
+          .filter(p => this.state.currentSounds.has(p.id));
 
-      if (changed) {
-        this.registry.updateAll(performance.now());
+        const activePreviewTracks = this.state.previewItems
+          .filter(p => p.type !== "sound")
+          .filter(p =>
+            playback.track &&
+            playback.track.id === p.id &&
+            playback.track.progress < playback.track.duration
+          );
+
+        // Keep only active preview items
+        this.state.previewItems = [
+          ...activePreviewSfx,
+          ...activePreviewTracks,
+        ];
+
+        if (this.state.previewItems.length === 0) {
+          this.state.previewing = false;
+        }
+      }
+
+      // --------------------------------------------------------
+      // NOTIFY UI (MAIN PLAYBACK ONLY WHEN NOT PREVIEWING)
+      // --------------------------------------------------------
+      if (!this.state.previewing) {
+        this.plugin.views.forEach((v) => {
+          v.resetInterpolationBaselines();
+          v.updateNonSfxUI();
+          v.updateSfxUI();
+        });
+
+        if (changed) {
+          this.registry.updateAll(performance.now());
+        }
       }
 
       // Mark online (PlaybackSync does NOT handle reconnection)
       this.plugin.kenkuOnline = true;
 
     } catch {
-      // Delegate connection failure to ConnectionHandler
       this.plugin.connection.handleDisconnect();
     }
   }

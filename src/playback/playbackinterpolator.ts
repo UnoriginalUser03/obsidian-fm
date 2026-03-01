@@ -11,7 +11,7 @@ export class PlaybackInterpolator {
     private plugin: ObsidianFMPlugin,
     private state: PlaybackState,
     private registry: InlineButtonRegistry
-  ) {}
+  ) { }
 
   // ------------------------------------------------------------
   // START LOOP
@@ -19,13 +19,11 @@ export class PlaybackInterpolator {
   start() {
     const tick = () => {
       const now = performance.now();
-
-      // Update inline buttons
-      this.registry.updateAll(now);
-
-      // Update playback pane views
-      this.plugin.views.forEach((v) => v.updateInterpolated());
-
+      // Only update main playback UI when NOT previewing
+      if (!this.state.previewing) {
+        this.plugin.views.forEach((v) => v.updateInterpolated());
+        this.registry.updateAll(now);
+      }
       this.frameId = requestAnimationFrame(tick);
     };
 

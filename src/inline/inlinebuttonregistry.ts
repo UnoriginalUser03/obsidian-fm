@@ -8,6 +8,8 @@ import { SoundButton } from "./button types/soundbutton";
 import { SoundboardButton } from "./button types/soundboardbutton";
 import { SoundscapeButton } from "./button types/soundscapebutton";
 import { Helpers } from "src/helpers/helpers";
+import { SoundscapeItem } from "src/api/types";
+import { Notice } from "obsidian";
 
 export class InlineButtonRegistry {
   private buttons = new Set<InlineButton>();
@@ -16,6 +18,55 @@ export class InlineButtonRegistry {
     private plugin: ObsidianFMPlugin,
     private state: PlaybackState
   ) { }
+
+  // ------------------------------------------------------------
+  // PARSER FOR SOUNDSCAPE ITEMS
+  // ------------------------------------------------------------
+  private parseSoundscapeItems(rawItems: string[]): SoundscapeItem[] {
+    const items: SoundscapeItem[] = [];
+
+    for (const raw of rawItems) {
+      const trimmed = raw.trim();
+
+      // random group: random(label:id1|id2|id3)[min-max]
+      const match = trimmed.match(/^random\(([^)]+)\)\[(\d+)-(\d+)\]$/);
+      if (match) {
+        const inside = match[1]; // label:id1|id2|id3  OR  id1|id2|id3
+
+        let label = "Random Group";
+        let idPart = inside;
+
+        // If there's a label, split it off
+        const colonIndex = inside.indexOf(":");
+        if (colonIndex !== -1) {
+          label = inside.slice(0, colonIndex).trim();
+          idPart = inside.slice(colonIndex + 1).trim();
+        }
+
+        const ids = idPart.split("|").map(s => s.trim());
+        const min = Number(match[2]);
+        const max = Number(match[3]);
+
+        items.push({
+          type: "random-group",
+          ids,
+          min,
+          max,
+          label
+        });
+        continue;
+      }
+
+      // fallback: loop item
+      items.push({
+        type: "loop",
+        id: trimmed,
+        label: trimmed
+      });
+    }
+
+    return items;
+  }
 
   // ------------------------------------------------------------
   // FACTORY: Create button from parsed inline config
@@ -27,9 +78,6 @@ export class InlineButtonRegistry {
 
     if (!id || !type) return null;
 
-    // ------------------------------------------------------------
-    // UNIVERSAL OPTIONAL SETTINGS (parsed once)
-    // ------------------------------------------------------------
     const shuffle = config.shuffle ? Helpers.parseBool(config.shuffle) : undefined;
     const repeat = config.repeat ? (config.repeat as "track" | "playlist" | "off") : undefined;
     const volume = config.volume ? Number(config.volume) : undefined;
@@ -38,25 +86,11 @@ export class InlineButtonRegistry {
 
     switch (type) {
       case "track":
-        btn = new TrackButton(
-          this.plugin,
-          id,
-          title,
-          shuffle,
-          repeat,
-          volume
-        );
+        btn = new TrackButton(this.plugin, id, title, shuffle, repeat, volume);
         break;
 
       case "playlist":
-        btn = new PlaylistButton(
-          this.plugin,
-          id,
-          title,
-          shuffle,
-          repeat,
-          volume
-        );
+        btn = new PlaylistButton(this.plugin, id, title, shuffle, repeat, volume);
         break;
 
       case "sound":
@@ -70,14 +104,16 @@ export class InlineButtonRegistry {
         break;
 
       case "soundscape":
-        const stackIds = config.stack ? config.stack.split(",") : [];
-        btn = new SoundscapeButton(this.plugin, id, title, stackIds);
+        const rawItems = config.stack?.split(",") ?? [];
+        const items = this.parseSoundscapeItems(rawItems);
+        btn = new SoundscapeButton(this.plugin, id, title, items);
         break;
 
       default:
         console.warn("Unknown inline type:", type);
         return null;
     }
+
     this.validateButton(btn);
     this.buttons.add(btn);
     return btn;
@@ -113,7 +149,11 @@ export class InlineButtonRegistry {
 
         case "soundscape":
           const sc = btn as SoundscapeButton;
-          btn.isValid = sc.stackIds.every(id => this.plugin.soundMap.has(id));
+          btn.isValid = sc.items.every(item => {
+            if (item.type === "loop") return this.plugin.soundMap.has(item.id);
+            if (item.type === "random-group") return item.ids.every(id => this.plugin.soundMap.has(id));
+            return false;
+          });
           break;
       }
     }
@@ -141,14 +181,15 @@ export class InlineButtonRegistry {
 
       case "soundscape":
         const sc = btn as SoundscapeButton;
-        btn.isValid = sc.stackIds.every(id => this.plugin.soundMap.has(id));
+        btn.isValid = sc.items.every(item => {
+          if (item.type === "loop") return this.plugin.soundMap.has(item.id);
+          if (item.type === "random-group") return item.ids.every(id => this.plugin.soundMap.has(id));
+          return false;
+        });
         break;
     }
   }
 
-  // ------------------------------------------------------------
-  // UPDATE STATE (called by PlaybackSync)
-  // ------------------------------------------------------------
   updateAll(now: number) {
     for (const btn of this.buttons) {
       btn.updateState();
@@ -156,18 +197,12 @@ export class InlineButtonRegistry {
     }
   }
 
-  // ------------------------------------------------------------
-  // UPDATE PROGRESS ONLY (called by PlaybackInterpolator)
-  // ------------------------------------------------------------
   updateProgress(now: number) {
     for (const btn of this.buttons) {
       btn.updateProgress(now);
     }
   }
 
-  // ------------------------------------------------------------
-  // Remove button (if needed)
-  // ------------------------------------------------------------
   remove(btn: InlineButton) {
     this.buttons.delete(btn);
     btn.destroy();

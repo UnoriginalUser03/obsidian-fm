@@ -1,7 +1,9 @@
-import { App, prepareFuzzySearch, SearchMatches, setIcon } from "obsidian";
+// ui/search/Autocomplete.ts
+import { App, prepareFuzzySearch, SearchMatches } from "obsidian";
 import { createPopper, Instance as PopperInstance } from "@popperjs/core";
-import { FilteredEntry, MediaType, SuggestItem } from "src/api/types";
+import type { FilteredEntry, SuggestItem } from "src/api/types";
 import ObsidianFMPlugin from "src/main";
+import { AutocompleteItem } from "./autocompleteitem";
 
 export class Autocomplete {
     private app: App;
@@ -11,14 +13,12 @@ export class Autocomplete {
     private listEl: HTMLElement;
     private items: SuggestItem[];
     private filtered: FilteredEntry[] = [];
-    private selectedIndex = 0;
+    public selectedIndex = 0;
     private onSelect: (item: SuggestItem) => void;
     private popper: PopperInstance | null = null;
     private isOpen = false;
 
-    private currentPreview: string | null = null;
-
-    // Bound handlers for proper cleanup
+    // Bound handlers
     private onInput = () => this.update(this.inputEl.value);
     private onKeyDown = (evt: KeyboardEvent) => this.handleKeyDown(evt);
     private onDocMouseDown = (evt: MouseEvent) => this.handleDocMouseDown(evt);
@@ -51,7 +51,6 @@ export class Autocomplete {
         this.inputEl.addEventListener("input", this.onInput);
         this.inputEl.addEventListener("keydown", this.onKeyDown);
         this.inputEl.addEventListener("blur", this.onBlur);
-
         document.addEventListener("mousedown", this.onDocMouseDown);
     }
 
@@ -60,7 +59,7 @@ export class Autocomplete {
 
         if (evt.key === "ArrowDown") {
             this.selectedIndex = (this.selectedIndex + 1) % this.filtered.length;
-            this.render();
+            this.updateSelectionHighlight();
             evt.preventDefault();
         }
 
@@ -68,7 +67,7 @@ export class Autocomplete {
             this.selectedIndex =
                 (this.selectedIndex - 1 + this.filtered.length) %
                 this.filtered.length;
-            this.render();
+            this.updateSelectionHighlight();
             evt.preventDefault();
         }
 
@@ -86,6 +85,10 @@ export class Autocomplete {
         ) {
             this.close();
         }
+    }
+
+    public clear() {
+        this.inputEl.value = "";
     }
 
     // ------------------------------------------------------------
@@ -132,59 +135,27 @@ export class Autocomplete {
         this.listEl.empty();
 
         this.filtered.forEach((entry, index) => {
-            const { item, matches } = entry;
+            const item = new AutocompleteItem(this, this.plugin, entry, index);
+            item.renderInto(this.listEl);
+        });
+    }
 
-            const row = this.listEl.createDiv({
-                cls: "obsidianfm-suggest-row",
-            });
-
-            const top = row.createDiv({ cls: "obsidianfm-suggest-top" });
-
-            if (item.icon) {
-                const iconEl = top.createDiv({ cls: "obsidianfm-suggest-icon" });
-                setIcon(iconEl, item.icon);
-            }
-
-            const labelEl = top.createSpan({ cls: "obsidianfm-suggest-label" });
-            labelEl.append(this.highlight(item.label, matches));
-
-            const isPreviewing = this.currentPreview === item.id;
-            const previewBtn = top.createDiv({
-                cls: "obsidianfm-suggest-preview",
-            });
-
-            setIcon(previewBtn, isPreviewing ? "square" : "play");
-
-            previewBtn.addEventListener("mousedown", async (evt) => {
-                evt.preventDefault();
-                evt.stopImmediatePropagation();
-                await this.togglePreview(entry);
-            });
-
-            if (item.subtitle) {
-                row.createDiv({
-                    text: item.subtitle,
-                    cls: "obsidianfm-suggest-subtitle",
-                });
-            }
-
-            if (index === this.selectedIndex) {
+    private updateSelectionHighlight() {
+        const rows = this.listEl.querySelectorAll(".obsidianfm-suggest-row");
+        rows.forEach((row, i) => {
+            if (i === this.selectedIndex) {
                 row.addClass("is-selected");
                 row.scrollIntoView({ block: "nearest" });
+            } else {
+                row.removeClass("is-selected");
             }
-
-            row.addEventListener("mousedown", async (evt) => {
-                evt.preventDefault();
-                await this.choose(item);
-            });
-
-            row.addEventListener("mouseenter", () => {
-                const prev = this.listEl.querySelector(".is-selected");
-                if (prev) prev.removeClass("is-selected");
-                row.addClass("is-selected");
-                this.selectedIndex = index;
-            });
         });
+    }
+
+    // Called by AutocompleteItem
+    public setSelectedIndex(index: number) {
+        this.selectedIndex = index;
+        this.updateSelectionHighlight();
     }
 
     // ------------------------------------------------------------
@@ -221,7 +192,13 @@ export class Autocomplete {
     public async close() {
         if (!this.isOpen) return;
 
-        await this.stopPreview();
+        // Stop preview if active
+        const playback = this.plugin.playback;
+        if (playback.previewing) {
+            const ctrl = this.plugin.playbackController;
+            ctrl.suppressRestore = false;
+            await ctrl.exitPreviewMode();
+        }
 
         this.isOpen = false;
         this.popupEl.style.display = "none";
@@ -232,52 +209,23 @@ export class Autocomplete {
         }
     }
 
+    public getInputEl(): HTMLInputElement {
+        return this.inputEl;
+    }
+
     // ------------------------------------------------------------
-    // SELECTION + PREVIEW
+    // SELECTION
     // ------------------------------------------------------------
-    private async choose(item: SuggestItem) {
+    public async choose(item: SuggestItem) {
         this.inputEl.value = item.label;
         this.onSelect(item);
         await this.close();
     }
 
-    private async togglePreview(entry: FilteredEntry) {
-        const { id, type } = entry.item;
-        const ctrl = this.plugin.playbackController;
-
-        if (this.currentPreview === id) {
-            ctrl.suppressRestore = false;
-            await ctrl.exitPreviewMode();
-            this.currentPreview = null;
-            this.render();
-            return;
-        }
-
-        if (this.currentPreview) {
-            ctrl.suppressRestore = true;
-            await ctrl.exitPreviewMode();
-        }
-
-        ctrl.suppressRestore = false;
-        this.currentPreview = id;
-        await ctrl.enterPreviewMode(id, type);
-
-        this.render();
-    }
-
-    private async stopPreview() {
-        if (this.currentPreview) {
-            const ctrl = this.plugin.playbackController;
-            ctrl.suppressRestore = false;
-            await ctrl.exitPreviewMode();
-        }
-        this.currentPreview = null;
-    }
-
     // ------------------------------------------------------------
     // HIGHLIGHTING
     // ------------------------------------------------------------
-    private highlight(label: string, matches: SearchMatches): DocumentFragment {
+    public highlight(label: string, matches: SearchMatches): DocumentFragment {
         const frag = document.createDocumentFragment();
         let lastIndex = 0;
 
@@ -301,8 +249,12 @@ export class Autocomplete {
         return frag;
     }
 
+    public setItems(items: SuggestItem[]) {
+        this.items = items;
+    }
+
     // ------------------------------------------------------------
-    // FULL DESTROY (for rebuild)
+    // FULL DESTROY
     // ------------------------------------------------------------
     public destroy() {
         this.close();

@@ -7,11 +7,11 @@ import {
   Playlist,
   Sound,
   Soundboard,
+  SoundscapeItem,
   Track,
 } from "./api/types";
 
 import { createObsidianFMEditInlineExtension } from "./inline/editinline";
-import { ObsidianFMInsert } from "./ui/modal";
 import { PlaybackState } from "./playback/playbackstate";
 import { PlaybackSync } from "./playback/playbacksync";
 import { PlaybackInterpolator } from "./playback/playbackinterpolator";
@@ -20,6 +20,8 @@ import { InlineButtonRegistry } from "./inline/inlinebuttonregistry";
 import { PlayerView } from "./ui/player/playerview";
 import { VIEW_TYPE_OBSIDIANFM } from "./ui/player/playerview";
 import { PlaybackController } from "./playback/playbackcontroller";
+import { InlinePlayerInsertModal } from "./ui/modal/inlineplayerinsertmodal";
+import { SoundscapeInsertModal } from "./ui/modal/soundscapeinsertmodal";
 
 const DEFAULT_SETTINGS: ObsidianFMSettings = {
   baseUrl: "http://127.0.0.1:3333",
@@ -109,13 +111,12 @@ export default class ObsidianFMPlugin extends Plugin {
           return;
         }
 
-        new ObsidianFMInsert(
+        new InlinePlayerInsertModal(
           this.app,
           this,
           (result) => {
             editor.replaceSelection(this.buildInlineCode(result));
           },
-          "normal"
         ).open();
       },
     });
@@ -129,13 +130,12 @@ export default class ObsidianFMPlugin extends Plugin {
           return;
         }
 
-        new ObsidianFMInsert(
+        new SoundscapeInsertModal(
           this.app,
           this,
           (result) => {
             editor.replaceSelection(this.buildInlineCode(result));
           },
-          "soundscape"
         ).open();
       },
     });
@@ -165,13 +165,13 @@ export default class ObsidianFMPlugin extends Plugin {
               const trimmed = raw.trim();
               const initialConfig = trimmed.length > 0 ? { title: trimmed } : undefined;
 
-              new ObsidianFMInsert(
+              new InlinePlayerInsertModal(
                 this.app,
                 this,
                 (result) => {
                   editor.replaceSelection(this.buildInlineCode(result));
                 },
-                "normal",
+                () => { },
                 initialConfig
               ).open();
             });
@@ -192,13 +192,13 @@ export default class ObsidianFMPlugin extends Plugin {
               const trimmed = raw.trim();
               const initialConfig = trimmed.length > 0 ? { title: trimmed } : undefined;
 
-              new ObsidianFMInsert(
+              new SoundscapeInsertModal(
                 this.app,
                 this,
                 (result) => {
                   editor.replaceSelection(this.buildInlineCode(result));
                 },
-                "soundscape",
+                () => { },
                 initialConfig
               ).open();
             });
@@ -285,8 +285,9 @@ export default class ObsidianFMPlugin extends Plugin {
       params.push(`overlapping="${result.overlapping ? "true" : "false"}"`);
     }
 
-    if (result.stack?.length) {
-      params.push(`stack="${result.stack.map((s) => s.id).join(",")}"`);
+    if (result.type === "soundscape" && result.stack?.length) {
+      const serialized = result.stack.map(item => this.serializeSoundscapeItem(item)).join(",");
+      params.push(`stack="${serialized}"`);
     }
 
     return `\u200B\`obsidianfm: ${params.join(" ")}\`\u200B`;
@@ -312,6 +313,23 @@ export default class ObsidianFMPlugin extends Plugin {
 
     return result;
   }
+
+private serializeSoundscapeItem(item: SoundscapeItem): string {
+    if (item.type === "loop") {
+        return item.id;
+    }
+
+    if (item.type === "random-group") {
+        const namePart =
+            item.label && item.label !== "Flavour Group"
+                ? `${item.label}:`
+                : "";
+
+        return `random(${namePart}${item.ids.join("|")})[${item.min}-${item.max}]`;
+    }
+
+    return "";
+}
 
   async openPlaybackPane() {
     let leaf = this.app.workspace.getRightLeaf(false);

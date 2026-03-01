@@ -2,16 +2,30 @@
 import { setIcon } from "obsidian";
 import ObsidianFMPlugin from "src/main";
 import { InlineButton } from "../inlinebutton";
+import { SoundscapeItem } from "src/api/types";
 
 export class SoundscapeButton extends InlineButton {
   constructor(
     plugin: ObsidianFMPlugin,
     id: string,
     title: string,
-    public stackIds: string[]
+    public items: SoundscapeItem[]
   ) {
     super(plugin, id, "soundscape", title);
     setIcon(this.iconEl, plugin.typeIconMap["soundscape"]);
+  }
+
+  // ------------------------------------------------------------
+  // HELPERS
+  // ------------------------------------------------------------
+  private getLoopIds(): string[] {
+    return this.items
+      .filter(item => item.type === "loop")
+      .map(item => item.id);
+  }
+
+  private hasRandomActivity(): boolean {
+    return this.plugin.playbackController.randomGroupTimers.has(this.id);
   }
 
   // ------------------------------------------------------------
@@ -20,11 +34,15 @@ export class SoundscapeButton extends InlineButton {
   updateState() {
     const s = this.plugin.playback;
 
+    const loopIds = this.getLoopIds();
     const isSelected = s.currentSoundscapeId === this.id;
-    const hasPlaying = this.stackIds.some(id => s.currentSounds.has(id));
-    const isActive = isSelected && hasPlaying;
 
-    // Apply disabled state (offline or invalid)
+    const hasLoopPlaying = loopIds.some(id => s.currentSounds.has(id));
+    const hasRandomPlaying = this.hasRandomActivity();
+
+    const isActive = isSelected && (hasLoopPlaying || hasRandomPlaying);
+
+    // Disabled state (offline or invalid)
     this.applyDisabledState();
 
     // Tooltip: offline handled here
@@ -52,15 +70,19 @@ export class SoundscapeButton extends InlineButton {
   }
 
   // ------------------------------------------------------------
-  // PROGRESS UPDATE (unchanged)
+  // PROGRESS UPDATE
   // ------------------------------------------------------------
   updateProgress(now: number) {
     const s = this.plugin.playback;
 
+    const loopIds = this.getLoopIds();
     const isSelected = s.currentSoundscapeId === this.id;
-    const hasPlaying = this.stackIds.some(id => s.currentSounds.has(id));
 
-    if (!isSelected || !hasPlaying || !this.isValid) {
+    const hasLoopPlaying = loopIds.some(id => s.currentSounds.has(id));
+    const hasRandomPlaying = this.hasRandomActivity();
+
+    // If only random groups are active → show 0% but keep active state
+    if (!isSelected || (!hasLoopPlaying && !hasRandomPlaying) || !this.isValid) {
       if (this.el.dataset.progress !== "0%") {
         this.el.dataset.progress = "0%";
         this.el.style.setProperty("--progress", "0%");
@@ -68,12 +90,27 @@ export class SoundscapeButton extends InlineButton {
       return;
     }
 
-    const active = this.stackIds
+    // If no loop sounds → progress stays at 0%
+    if (!hasLoopPlaying) {
+      if (this.el.dataset.progress !== "0%") {
+        this.el.dataset.progress = "0%";
+        this.el.style.setProperty("--progress", "0%");
+      }
+      return;
+    }
+
+    // Normal loop progress logic
+    const active = loopIds
       .map(id => {
         const entry = s.currentSounds.get(id);
         return entry ? ([id, entry] as const) : null;
       })
-      .filter((x): x is readonly [string, { progress: number; duration: number; frozen?: boolean }] => x !== null);
+      .filter(
+        (x): x is readonly [
+          string,
+          { progress: number; duration: number; frozen?: boolean }
+        ] => x !== null
+      );
 
     if (active.length === 0) {
       if (this.el.dataset.progress !== "0%") {
@@ -83,7 +120,9 @@ export class SoundscapeButton extends InlineButton {
       return;
     }
 
-    const [soundId, entry] = active.sort((a, b) => b[1].progress - a[1].progress)[0];
+    const [soundId, entry] = active.sort(
+      (a, b) => b[1].progress - a[1].progress
+    )[0];
 
     if (entry.duration === 0) {
       if (this.el.dataset.progress !== "2%") {
@@ -128,15 +167,19 @@ export class SoundscapeButton extends InlineButton {
     const ctrl = this.plugin.playbackController;
     const s = this.plugin.playback;
 
+    const loopIds = this.getLoopIds();
     const isSelected = s.currentSoundscapeId === this.id;
-    const hasPlaying = this.stackIds.some(id => s.currentSounds.has(id));
-    const isActive = isSelected && hasPlaying;
+
+    const hasLoopPlaying = loopIds.some(id => s.currentSounds.has(id));
+    const hasRandomPlaying = this.hasRandomActivity();
+
+    const isActive = isSelected && (hasLoopPlaying || hasRandomPlaying);
 
     try {
       if (isActive) {
         await ctrl.stopSoundscape(this.id);
       } else {
-        await ctrl.playSoundscape(this.id, this.stackIds);
+        await ctrl.playSoundscape(this.id, this.items);
       }
     } catch {
       this.plugin.connection.handleDisconnect();
