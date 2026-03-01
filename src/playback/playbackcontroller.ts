@@ -21,9 +21,9 @@ export class PlaybackController {
     public suppressRestore = false;
     public previewSnapshot: PlaybackSnapshot | null = null;
     public randomGroupTimers: Map<string, NodeJS.Timeout[]> = new Map();
+    public watchPreview: NodeJS.Timer | null = null;
+   
     private additivePreviewStarted = false;
-
-    private watchPreview: NodeJS.Timer | null = null;
     private previewUpdateListeners: Array<() => void> = [];
 
     constructor(private plugin: ObsidianFMPlugin) { }

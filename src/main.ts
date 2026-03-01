@@ -253,6 +253,25 @@ export default class ObsidianFMPlugin extends Plugin {
     this.playbackInterpolator.start();
   }
 
+  async onunload() {
+    // Stop all audio
+    await this.playbackController.stopAll();
+
+    // Kill random-group timers
+    for (const timers of this.playbackController.randomGroupTimers.values()) {
+      for (const t of timers) clearTimeout(t);
+    }
+    this.playbackController.randomGroupTimers.clear();
+
+    // Kill preview watcher
+    if (this.playbackController.watchPreview) {
+      clearInterval(this.playbackController.watchPreview);
+      this.playbackController.watchPreview = null;
+    }
+
+    // Stop interpolation loop
+    this.playbackInterpolator.stop();
+  }
   public buildInlineCode(result: InsertResult): string {
     const params: string[] = [];
 
@@ -314,22 +333,22 @@ export default class ObsidianFMPlugin extends Plugin {
     return result;
   }
 
-private serializeSoundscapeItem(item: SoundscapeItem): string {
+  private serializeSoundscapeItem(item: SoundscapeItem): string {
     if (item.type === "loop") {
-        return item.id;
+      return item.id;
     }
 
     if (item.type === "random-group") {
-        const namePart =
-            item.label && item.label !== "Flavour Group"
-                ? `${item.label}:`
-                : "";
+      const namePart =
+        item.label && item.label !== "Flavour Group"
+          ? `${item.label}:`
+          : "";
 
-        return `random(${namePart}${item.ids.join("|")})[${item.min}-${item.max}]`;
+      return `random(${namePart}${item.ids.join("|")})[${item.min}-${item.max}]`;
     }
 
     return "";
-}
+  }
 
   async openPlaybackPane() {
     let leaf = this.app.workspace.getRightLeaf(false);
