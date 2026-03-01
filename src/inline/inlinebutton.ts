@@ -31,7 +31,7 @@ export abstract class InlineButton {
   /** Applies tooltip for offline state. Returns true if handled. */
   protected applyBaseTooltip(): boolean {
     if (!this.plugin.kenkuOnline) {
-      this.el.title = "KenkuFM is offline";
+      this.el.setAttr("aria-label", "KenkuFM is Offline");
       return true;
     }
     return false;

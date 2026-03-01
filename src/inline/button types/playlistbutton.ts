@@ -34,12 +34,12 @@ export class PlaylistButton extends InlineButton {
 
     // Tooltip + icon: invalid handled here
     if (this.applyInvalid()) {
-      this.el.title = "Playlist not found in KenkuFM";
+      this.el.setAttr("aria-label", "Playlist not found in KenkuFM");
       return;
     }
 
     // Valid tooltip
-    this.el.title = "Play playlist";
+    this.el.setAttr("aria-label", "Play Playlist");
 
     // Playback classes
     this.el.classList.toggle("is-playing", isPlaying);

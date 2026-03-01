@@ -28,12 +28,12 @@ export class SoundButton extends InlineButton {
 
     // Tooltip + icon: invalid handled here
     if (this.applyInvalid()) {
-      this.el.title = "Sound not found in KenkuFM";
+      this.el.setAttr("aria-label", "Sound not found in KenkuFM");
       return;
     }
 
     // Valid tooltip
-    this.el.title = "Play sound";
+    this.el.setAttr("aria-label", "Play Sound");
 
     // Playback class
     this.el.classList.toggle("is-playing", isPlaying);

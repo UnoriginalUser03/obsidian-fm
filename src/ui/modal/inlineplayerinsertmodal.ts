@@ -64,7 +64,8 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
             if (parent) {
                 const icon = createSpan({ cls: "inline-error-icon-search" });
                 setIcon(icon, "alert-triangle");
-                icon.setAttr("title", "This item no longer exists");
+                icon.setAttribute("data-tooltip-position", "top");
+                icon.setAttr("aria-label", "This item no longer exists");
 
                 parent.insertBefore(icon, this.searchInputEl);
             }
@@ -211,7 +212,14 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
             this.renderProperties(this.bodySection, item);
         }
 
-        // NEW: update preview button visibility
+        // Update tooltip but keep the icon visible
+        const parent = this.searchInputEl?.parentElement;
+        const icon = parent?.querySelector(".inline-error-icon-search") as HTMLElement | null;
+        if (icon) {
+            icon.setAttr("aria-label", "This will be fixed after saving.");
+            icon.style.opacity = "0.7"; // correct way to dim it
+        }
+
         this.updatePreviewVisibility();
     }
 

@@ -32,12 +32,12 @@ export class SoundboardButton extends InlineButton {
 
     // Tooltip + icon: invalid handled here
     if (this.applyInvalid()) {
-      this.el.title = "Soundboard not found in KenkuFM";
+      this.el.setAttr("aria-label", "Soundboard not found in KenkuFM");
       return;
     }
 
     // Valid tooltip
-    this.el.title = "Play soundboard";
+    this.el.setAttr("aria-label", "Play Soundboard");
 
     // If board missing (shouldn't happen if valid), bail safely
     if (!board) return;

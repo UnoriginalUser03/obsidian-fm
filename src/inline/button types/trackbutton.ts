@@ -34,12 +34,12 @@ export class TrackButton extends InlineButton {
 
     // Tooltip + icon: invalid handled here
     if (this.applyInvalid()) {
-      this.el.title = "Track not found in KenkuFM";
+      this.el.setAttr("aria-label", "Track not found in KenkuFM");
       return;
     }
 
     // Valid tooltip
-    this.el.title = "Play track";
+    this.el.setAttr("aria-label", "Play Track");
 
     // Playback classes
     this.el.classList.toggle("is-playing", isPlaying);
@@ -48,8 +48,8 @@ export class TrackButton extends InlineButton {
     // Icon logic
     const newIcon =
       isPaused ? "play" :
-      isPlaying ? "pause" :
-      "play";
+        isPlaying ? "pause" :
+          "play";
 
     if (this.iconEl.dataset.currentIcon !== newIcon) {
       this.iconEl.dataset.currentIcon = newIcon;

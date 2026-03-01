@@ -50,12 +50,12 @@ export class SoundscapeButton extends InlineButton {
 
     // Tooltip + icon: invalid handled here
     if (this.applyInvalid()) {
-      this.el.title = "One or more sounds in this soundscape were not found in KenkuFM";
+      this.el.setAttr("aria-label", "Some sounds were not found in KenkuFM");
       return;
     }
 
     // Valid tooltip
-    this.el.title = "Play soundscape";
+    this.el.setAttr("aria-label", "Play Soundscape");
 
     // Playback classes
     this.el.classList.toggle("is-playing", isActive);

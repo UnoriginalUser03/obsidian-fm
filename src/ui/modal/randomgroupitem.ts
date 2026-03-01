@@ -44,7 +44,7 @@ export class RandomGroupItem {
             // Validation: missing sound
             if (!this.soundMap.has(id)) {
                 row.classList.add("rg-invalid");
-                row.setAttr("title", "This sound no longer exists");
+                row.setAttr("aria-label", "This sound no longer exists");
             }
 
             // Remove button

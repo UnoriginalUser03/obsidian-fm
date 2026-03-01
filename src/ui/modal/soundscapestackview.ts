@@ -108,7 +108,7 @@ export class SoundscapeStackView {
 
                 const warn = left.createSpan({ cls: "stack-warning-icon" });
                 setIcon(warn, "alert-triangle");
-                warn.setAttr("title", "This item has errors");
+                warn.setAttr("aria-label", "This item has errors");
             }
 
             // -----------------------------
@@ -180,8 +180,8 @@ export class SoundscapeStackView {
                         tooltip += `\n(+${item.ids.length - 4} more…)`;
                     }
 
-                    titleSpan.setAttr("title", tooltip);
-                    timing.setAttr("title", tooltip);
+                    titleSpan.setAttr("aria-label", tooltip);
+                    timing.setAttr("aria-label", tooltip);
                 }
 
                 // -----------------------------
@@ -206,7 +206,7 @@ export class SoundscapeStackView {
                         value: String(item.min),
                         cls: "rg-number"
                     });
-                    minInput.setAttr("title", "Minimum seconds between random sounds");
+                    minInput.setAttr("aria-label", "Minimum seconds between random sounds");
                     minInput.onclick = (e) => e.stopPropagation();
 
                     const maxInput = left.createEl("input", {
@@ -214,7 +214,7 @@ export class SoundscapeStackView {
                         value: String(item.max),
                         cls: "rg-number"
                     });
-                    maxInput.setAttr("title", "Maximum seconds between random sounds");
+                    maxInput.setAttr("aria-label", "Maximum seconds between random sounds");
                     maxInput.onclick = (e) => e.stopPropagation();
 
                     const help = body.createDiv({ cls: "rg-help" });
