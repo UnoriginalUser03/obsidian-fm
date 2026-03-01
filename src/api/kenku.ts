@@ -297,12 +297,14 @@ export const setPlayback = async (
   shuffle?: boolean,
   repeat?: "track" | "playlist" | "off",
   volume?: number,
+  muted?: boolean,
 ): Promise<void> => {
   try {
     await Promise.all([
       shuffle !== undefined ? setShuffle(baseUrl, shuffle) : Promise.resolve(),
       repeat !== undefined ? setRepeat(baseUrl, repeat) : Promise.resolve(),
       volume !== undefined ? setVolume(baseUrl, volume) : Promise.resolve(),
+      muted !== undefined ? setMute(baseUrl, muted) : Promise.resolve(),
     ]);
   } catch (e) {
     console.warn("Could not change playback settings:", e);

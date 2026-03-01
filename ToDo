@@ -1,5 +1,6 @@
-+ Preview button allows starting timers, stopping on end preview
 + Timers show progress for inline buttons when last item added or only item playing - maybe have them show in the sfx panel as well to show there is an active t imer?
 + Disallow editing when button is playing. 
+
++ General polish
 
 + Sync has to do with Kenku keeping stale data. Fixed autocomplete. Syncing requires Kenku restart 

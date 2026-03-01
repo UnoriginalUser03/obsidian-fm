@@ -3,6 +3,7 @@ import ObsidianFMPlugin from "src/main";
 import { stopSound } from "src/api/kenku";
 import { setIcon } from "obsidian";
 import { PlaybackState } from "src/playback/playbackstate";
+import { PendingTimer } from "src/api/types";
 
 export class PlayerSFXPanel {
     private container: HTMLElement;
@@ -10,6 +11,10 @@ export class PlayerSFXPanel {
     // Cached DOM references
     private groupEls: Record<string, HTMLElement> = {};
     private itemEls: Record<string, HTMLElement> = {};
+
+    // Timer UI
+    private timerGroupEl: HTMLElement | null = null;
+    private timerItemEls: Record<string, HTMLElement> = {};
 
     // Interpolation baseline
     private lastSyncTime: number | null = null;
@@ -62,6 +67,16 @@ export class PlayerSFXPanel {
             }
         });
 
+        // ------------------------------------------------------------
+        // TIMERS GROUP
+        // ------------------------------------------------------------
+        if (state.pendingTimers.length > 0) {
+            this.ensureTimerGroup();
+            this.updateTimerGroup(state.pendingTimers);
+        } else {
+            this.removeTimerGroup();
+        }
+
         // Reset interpolation baseline
         this.lastSyncTime = performance.now();
     }
@@ -92,6 +107,98 @@ export class PlayerSFXPanel {
             const percent = Math.min(100, (interpolated / entry.duration) * 100);
             bar.style.width = `${percent}%`;
         });
+
+        // ------------------------------------------------------------
+        // TIMER INTERPOLATION
+        // ------------------------------------------------------------
+        state.pendingTimers.forEach(timer => {
+            const item = this.timerItemEls[timer.id];
+            if (!item) return;
+
+            const bar = item.querySelector(".obsidianfm-timer-progress") as HTMLElement;
+            if (!bar) return;
+
+            const now = performance.now();
+            const elapsed = (now - timer.startedAt) / 1000;
+            const remaining = Math.max(0, timer.duration - elapsed);
+            const percent = (remaining / timer.duration) * 100;
+
+            bar.style.width = `${percent}%`;
+        });
+    }
+
+    // ------------------------------------------------------------
+    // TIMER GROUP CREATION
+    // ------------------------------------------------------------
+    private ensureTimerGroup() {
+        if (this.timerGroupEl) return;
+
+        const group = this.container.createDiv({ cls: "obsidianfm-sfx-group timers-group" });
+        this.timerGroupEl = group;
+
+        const header = group.createDiv({ cls: "obsidianfm-sfx-group-header" });
+        header.createDiv({
+            text: "Timers",
+            cls: "obsidianfm-sfx-group-title",
+        });
+
+        group.createDiv({ cls: "obsidianfm-sfx-list timers-list" });
+    }
+
+    private removeTimerGroup() {
+        if (!this.timerGroupEl) return;
+
+        this.timerGroupEl.remove();
+        this.timerGroupEl = null;
+        this.timerItemEls = {};
+    }
+
+    // ------------------------------------------------------------
+    // UPDATE TIMER GROUP CONTENTS
+    // ------------------------------------------------------------
+    private updateTimerGroup(timers: PendingTimer[]) {
+        if (!this.timerGroupEl) return;
+
+        const list = this.timerGroupEl.querySelector(".timers-list") as HTMLElement;
+
+        // Create/update items
+        timers.forEach(timer => {
+            if (!this.timerItemEls[timer.id]) {
+                this.timerItemEls[timer.id] = this.createTimerItem(list, timer);
+            }
+        });
+
+        // Remove stale items
+        Object.keys(this.timerItemEls).forEach(id => {
+            if (!timers.some(t => t.id === id)) {
+                this.timerItemEls[id].remove();
+                delete this.timerItemEls[id];
+            }
+        });
+    }
+
+    // ------------------------------------------------------------
+    // CREATE INDIVIDUAL TIMER ITEM
+    // ------------------------------------------------------------
+    private createTimerItem(parent: HTMLElement, timer: PendingTimer): HTMLElement {
+        const item = parent.createDiv({ cls: "obsidianfm-timer-item" });
+
+        const row = item.createDiv({ cls: "obsidianfm-timer-row" });
+
+        // Clock icon
+        const iconEl = row.createDiv({ cls: "obsidianfm-timer-icon" });
+        setIcon(iconEl, "clock");
+
+        // Label
+        row.createDiv({
+            text: timer.label,
+            cls: "obsidianfm-timer-title",
+        });
+
+        // Countdown bar (100 → 0)
+        item.createDiv({ cls: "obsidianfm-timer-progress" });
+
+        return item;
     }
 
     // ------------------------------------------------------------

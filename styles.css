@@ -260,6 +260,81 @@ button.obsidianfm-inline-btn.is-paused .obsidianfm-inline-icon {
   color: var(--color-red);
 }
 
+/* ------------------------------------------------------------
+   TIMERS GROUP
+------------------------------------------------------------ */
+
+.obsidianfm-sfx-group.timers-group {
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* ------------------------------------------------------------
+   TIMER ITEM
+------------------------------------------------------------ */
+
+.obsidianfm-timer-item {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 0;
+  gap: 4px;
+}
+
+.obsidianfm-timer-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+/* Clock icon */
+.obsidianfm-timer-icon {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.8;
+}
+
+/* Timer label */
+.obsidianfm-timer-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-normal);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ------------------------------------------------------------
+   TIMER PROGRESS BAR (100 → 0)
+------------------------------------------------------------ */
+
+.obsidianfm-timer-progress {
+  height: 4px;
+  width: 100%;
+  background-color: var(--background-modifier-border);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.obsidianfm-timer-progress::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  /* JS will shrink this from 100 → 0 */
+  background-color: var(--interactive-accent);
+  transition: width 0.15s linear;
+  border-radius: 2px;
+}
+
 
 .obsidianfm-inline-edit .error {
   opacity: 1 !important;

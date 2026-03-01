@@ -11,6 +11,8 @@ import {
 } from "src/api/kenku";
 import {
     MediaType,
+    PendingTimer,
+    PlaybackSettingsSnapshot,
     PlaybackSnapshot,
     RepeatMode,
     SoundscapeItem,
@@ -20,6 +22,7 @@ import ObsidianFMPlugin from "src/main";
 export class PlaybackController {
     public suppressRestore = false;
     public previewSnapshot: PlaybackSnapshot | null = null;
+    private previewSettingsSnapshot: PlaybackSettingsSnapshot | null = null;
     public randomGroupTimers: Map<string, NodeJS.Timeout[]> = new Map();
     public watchPreview: NodeJS.Timer | null = null;
 
@@ -225,7 +228,6 @@ export class PlaybackController {
         s.resetSoundBaseline(performance.now());
         this.updateUI();
     }
-
     private startRandomGroupScheduler(
         soundscapeId: string,
         item: Extract<SoundscapeItem, { type: "random-group" }>
@@ -235,11 +237,33 @@ export class PlaybackController {
         }
 
         const timers = this.randomGroupTimers.get(soundscapeId)!;
+        const s = this.state;
+
         const scheduleNext = () => {
-            const delay =
-                (Math.random() * (item.max - item.min) + item.min) * 1000;
+            const delaySeconds = Math.random() * (item.max - item.min) + item.min;
+            const delayMs = delaySeconds * 1000;
+
+            const timerId = `${soundscapeId}:${item.label}:${performance.now()}`;
+
+            // Only add timers for REAL soundscapes, not preview
+            if (soundscapeId !== "__preview_soundscape__") {
+                const pending: PendingTimer = {
+                    id: timerId,
+                    label: item.label,
+                    duration: delaySeconds,
+                    startedAt: performance.now(),
+                    soundscapeId,
+                };
+
+                s.pendingTimers.push(pending);
+            }
 
             const t = setTimeout(async () => {
+                // Remove UI timer (real soundscapes only)
+                if (soundscapeId !== "__preview_soundscape__") {
+                    s.pendingTimers = s.pendingTimers.filter(pt => pt.id !== timerId);
+                }
+
                 const available = item.ids.filter(
                     (id) => !this.state.currentSounds.has(id)
                 );
@@ -259,7 +283,7 @@ export class PlaybackController {
                 }
 
                 scheduleNext();
-            }, delay);
+            }, delayMs);
 
             timers.push(t);
         };
@@ -280,6 +304,9 @@ export class PlaybackController {
             for (const t of timers) clearTimeout(t);
             this.randomGroupTimers.delete(id);
         }
+
+        // Remove UI timers for this soundscape
+        s.pendingTimers = s.pendingTimers.filter(t => t.soundscapeId !== id);
 
         s.currentSoundscapeId = null;
         this.updateUI();
@@ -405,6 +432,16 @@ export class PlaybackController {
             }
         }
 
+        if (this.previewSettingsSnapshot) {
+            await setPlayback(
+                this.baseUrl,
+                this.previewSettingsSnapshot.shuffle,
+                this.previewSettingsSnapshot.repeat,
+                this.previewSettingsSnapshot.volume
+            );
+            this.previewSettingsSnapshot = null;
+        }
+
         if (snapshot.paused && restoredSomething) {
             await new Promise((res) => setTimeout(res, 50));
             await this.Pause();
@@ -436,23 +473,41 @@ export class PlaybackController {
         this.notifyPreviewUpdate();
     }
 
-    async enterPreviewMode(id: string, type: MediaType, opts?: { additive?: boolean }) {
+    async enterPreviewMode(
+        id: string,
+        type: MediaType,
+        opts?: {
+            additive?: boolean;
+            override?: {
+                shuffle?: boolean;
+                repeat?: RepeatMode;
+                volume?: number;
+                muted?: boolean;
+            };
+        }
+    ) {
         const s = this.state;
         const additive = opts?.additive ?? false;
 
-        // Capture snapshot only once per preview session
         if (!this.previewSnapshot) {
             this.previewSnapshot = this.captureState();
             this.additivePreviewStarted = false;
         }
 
-        // Non-additive preview always stops everything
+        if (!this.previewSettingsSnapshot) {
+            this.previewSettingsSnapshot = {
+                shuffle: this.state.shuffle,
+                repeat: this.state.repeat,
+                volume: this.state.volume,
+                muted: this.state.muted,
+            };
+        }
+
         if (!additive) {
             await this.stopAll();
             s.previewItems = [];
         }
 
-        // Additive preview: stop everything only on the first item
         if (additive && !this.additivePreviewStarted) {
             await this.stopAll();
             s.previewItems = [];
@@ -461,11 +516,19 @@ export class PlaybackController {
 
         // Play the new preview item
         await playSound(this.baseUrl, id, type);
-
         s.previewing = true;
 
-        // Push all soundboard sounds and playback sync will prune the only playing one
-        // Probs a better way to do this but idgaf 
+        // Only apply playback overrides for music (track/playlist)
+        if (opts?.override && (type === "track" || type === "playlist")) {
+            await setPlayback(
+                this.baseUrl,
+                opts.override.shuffle,
+                opts.override.repeat,
+                opts.override.volume,
+                opts.override.muted
+            );
+        }
+
         if (type === "soundboard") {
             const board = this.plugin.soundboardMap.get(id);
             if (board) {
@@ -487,11 +550,21 @@ export class PlaybackController {
 
         const s = this.state;
 
-        // End preview session
         s.previewing = false;
+        s.previewSoundscapeActive = false;
 
-        // Stop ONLY preview audio, not everything
         await this.stopPreviewAudioOnly();
+
+        const timers = this.randomGroupTimers.get("__preview_soundscape__");
+        if (timers) {
+            for (const t of timers) clearTimeout(t);
+            this.randomGroupTimers.delete("__preview_soundscape__");
+        }
+
+        // Safety: remove preview timers (should be none)
+        s.pendingTimers = s.pendingTimers.filter(
+            t => t.soundscapeId !== "__preview_soundscape__"
+        );
 
         if (!this.suppressRestore && this.previewSnapshot) {
             const snap = this.previewSnapshot;
@@ -504,6 +577,47 @@ export class PlaybackController {
         }
 
         this.notifyPreviewUpdate();
+        this.updateUI();
+    }
+
+    async previewSoundscape(items: SoundscapeItem[]) {
+        const s = this.state;
+
+        // Capture snapshot once
+        if (!this.previewSnapshot) {
+            this.previewSnapshot = this.captureState();
+            this.additivePreviewStarted = false;
+        }
+
+        // Stop everything before preview
+        await this.stopAll();
+        s.previewItems = [];
+        s.previewing = true;
+        s.previewSoundscapeActive = true;
+
+        // Use a special ID so timers are grouped
+        const previewId = "__preview_soundscape__";
+
+        // Start loop items and random-group timers
+        for (const item of items) {
+            if (item.type === "loop") {
+                await playSound(this.baseUrl, item.id, "sound");
+                s.currentSounds.set(item.id, { progress: 0, duration: 0, frozen: false });
+            }
+
+            if (item.type === "random-group") {
+                this.startRandomGroupScheduler(previewId, item);
+            }
+        }
+
+        // Track preview items so stopPreviewAudioOnly can clean them
+        s.previewItems = items.map(i =>
+            i.type === "loop"
+                ? { id: i.id, type: "sound" }
+                : { id: "__random_group__", type: "sound" }
+        );
+
+        this.startPreviewWatcher();
         this.updateUI();
     }
 }

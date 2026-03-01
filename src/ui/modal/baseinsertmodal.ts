@@ -1,5 +1,5 @@
 import { App, Modal, Notice, Setting, setIcon } from "obsidian";
-import type { MediaType, SuggestItem } from "src/api/types";
+import type { MediaType, RepeatMode, SuggestItem } from "src/api/types";
 import ObsidianFMPlugin from "src/main";
 import { Autocomplete } from "../search/autocomplete";
 
@@ -14,7 +14,7 @@ export abstract class BaseInsertModal extends Modal {
     protected isEditing: boolean = false;
 
     protected bodySection: HTMLElement | null = null;
-    private previewSection: HTMLElement | null = null;
+    protected previewSection: HTMLElement | null = null;
     private previewButton: HTMLButtonElement | null = null;
 
     constructor(
@@ -42,10 +42,7 @@ export abstract class BaseInsertModal extends Modal {
     protected abstract handleAutocompleteSelect(item: SuggestItem): void;
     protected abstract handleInsert(): void;
     protected abstract onModalClose(): void;
-
-    protected getPreviewItems(): { id: string; type: MediaType }[] {
-        return [];
-    }
+    protected abstract startPreview(): Promise<void>;
 
     protected onSearchReady?(inputEl: HTMLInputElement): void;
 
@@ -110,22 +107,12 @@ export abstract class BaseInsertModal extends Modal {
                 this.updatePreviewIcon();
 
                 btn.onClick(async () => {
-                    const items = this.getPreviewItems();
-                    if (items.length === 0) {
-                        new Notice("Nothing to preview.");
-                        return;
-                    }
-
                     const ctrl = this.plugin.playbackController;
                     const isPreviewing = this.plugin.playback.previewing;
 
                     if (!isPreviewing) {
-                        // Start preview (additive)
-                        for (const p of items) {
-                            await ctrl.enterPreviewMode(p.id, p.type, { additive: true });
-                        }
+                        await this.startPreview();
                     } else {
-                        // Stop preview
                         await ctrl.exitPreviewMode();
                     }
 
@@ -204,12 +191,5 @@ export abstract class BaseInsertModal extends Modal {
         this.autocomplete?.setItems(this.buildAutocompleteItems());
     }
 
-    protected updatePreviewVisibility() {
-        if (!this.previewSection) return;
-
-        const items = this.getPreviewItems();
-        const shouldShow = items.length > 0;
-
-        this.previewSection.toggleClass("hidden", !shouldShow);
-    }
+    protected abstract updatePreviewVisibility(): void;
 }

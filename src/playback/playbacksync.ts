@@ -125,6 +125,10 @@ export class PlaybackSync {
       // PREVIEW END DETECTION
       // --------------------------------------------------------
       if (this.state.previewing) {
+        if (this.state.previewSoundscapeActive) {
+          return;
+        }
+
         const activePreviewSfx = this.state.previewItems
           .filter(p => p.type === "sound")
           .filter(p => this.state.currentSounds.has(p.id));

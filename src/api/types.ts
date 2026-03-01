@@ -31,18 +31,18 @@ export interface Track {
 }
 
 export type SoundscapeItem =
-    {
-      type: "loop";
-      id: string;
-      label: string;
-    }
+  {
+    type: "loop";
+    id: string;
+    label: string;
+  }
   | {
-      type: "random-group";
-      label: string;
-      ids: string[];
-      min: number;
-      max: number;
-    };
+    type: "random-group";
+    label: string;
+    ids: string[];
+    min: number;
+    max: number;
+  };
 
 export interface SoundboardApiResponse {
   soundboards: [
@@ -67,9 +67,9 @@ export interface SoundboardApiResponse {
 }
 
 export interface PreviewItem {
-  id: string; 
+  id: string;
   type: MediaType;
-} 
+}
 
 export interface SoundboardPlaybackApiResponse {
   sounds: [
@@ -96,10 +96,18 @@ export interface SuggestItem {
 }
 
 export type FilteredEntry = {
-    item: SuggestItem;
-    score: number;
-    matches: SearchMatches;
+  item: SuggestItem;
+  score: number;
+  matches: SearchMatches;
 };
+
+export interface PendingTimer {
+  id: string;          // unique per timer instance
+  label: string;       // "Flavour Group" or custom group label
+  duration: number;    // total seconds until next trigger
+  startedAt: number;   // performance.now() when scheduled
+  soundscapeId: string; // "__preview_soundscape__" or real ID
+}
 
 export type InsertMode = "normal" | "soundscape";
 
@@ -114,6 +122,13 @@ export interface PlaybackSnapshot {
   playlistID: string | null;   // playlist IDs currently playing
   soundscapeID: string | null; // active soundscape IDs (usually 0 or 1)
   trackProgress: number | null;
+}
+
+export interface PlaybackSettingsSnapshot {
+  shuffle: boolean;
+  repeat: RepeatMode;
+  volume: number | undefined;
+  muted: boolean;
 }
 
 export interface InsertResult {

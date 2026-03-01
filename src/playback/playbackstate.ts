@@ -1,4 +1,4 @@
-import { RepeatMode, MediaType, PreviewItem } from "src/api/types";
+import { RepeatMode, MediaType, PreviewItem, PendingTimer } from "src/api/types";
 
 export class PlaybackState {
   // Track / playlist
@@ -15,6 +15,8 @@ export class PlaybackState {
   // Preview
   previewing: boolean = false;
   previewItems: PreviewItem[] = [];
+  previewSoundscapeActive = false;
+  pendingTimers: PendingTimer[] = [];
 
   // Playback flags
   paused = false;
@@ -26,7 +28,7 @@ export class PlaybackState {
   trackDuration: number | null = null;
 
   // Volume
-  volume: number | null = null;
+  volume: number | undefined = undefined;
   muted = false;
 
   // Interpolation baselines

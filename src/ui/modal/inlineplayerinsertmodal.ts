@@ -6,7 +6,7 @@ import { BaseInsertModal } from "./baseinsertmodal";
 
 export class InlinePlayerInsertModal extends BaseInsertModal {
     private selectedId: string | null = null;
-    private selectedType: string | null = null;
+    private selectedType: MediaType | null = null;
     private trackTitle = "";
 
     private repeat: RepeatMode = "off";
@@ -35,7 +35,7 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
 
     private applyInitialConfig(config: Record<string, string>) {
         this.selectedId = config.id ?? null;
-        this.selectedType = config.type ?? null;
+        this.selectedType = config.type as MediaType ?? null;
         this.trackTitle = config.trackTitle ?? "";
         this.label = config.title ?? "";
 
@@ -240,12 +240,30 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
         }
     }
 
-    // ------------------------------------------------------------
-    // PREVIEW SUPPORT
-    // ------------------------------------------------------------
-    protected getPreviewItems(): { id: string; type: MediaType }[] {
-        if (!this.selectedId || !this.selectedType) return [];
-        return [{ id: this.selectedId, type: this.selectedType as MediaType }];
+    protected getPreviewOverrides() {
+        if (!this.overrideSettings) return undefined;
+        if (this.selectedType !== "track" && this.selectedType !== "playlist") {
+            return undefined;
+        }
+
+        return {
+            shuffle: this.shuffle,
+            repeat: this.repeat,
+            volume: this.volume,
+            muted: false, // or your modal’s muted state
+        };
+    }
+
+    protected async startPreview(): Promise<void> {
+        const ctrl = this.plugin.playbackController;
+        if (!this.selectedId || !this.selectedType) {
+            new Notice("Nothing to preview.");
+            return;
+        }
+        await ctrl.enterPreviewMode(this.selectedId, this.selectedType, {
+            additive: true,
+            override: this.getPreviewOverrides()
+        });
     }
 
     // ------------------------------------------------------------
@@ -273,6 +291,14 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
         };
 
         this.onSubmit(result);
+    }
+
+    protected updatePreviewVisibility(): void {
+        if (!this.previewSection) return;
+
+        const shouldShow = this.selectedId !== null;
+
+        this.previewSection.toggleClass("hidden", !shouldShow);
     }
 
     protected onModalClose(): void { }

@@ -177,23 +177,6 @@ export class SoundscapeInsertModal extends BaseInsertModal {
         this.closeAutocomplete();
     }
 
-    protected getPreviewItems() {
-        const items: { id: string; type: MediaType }[] = [];
-
-        for (const item of this.stack) {
-            if (item.type === "loop") {
-                items.push({ id: item.id, type: "sound" });
-            }
-
-            if (item.type === "random-group" && item.ids.length > 0) {
-                const id = item.ids[Math.floor(Math.random() * item.ids.length)];
-                items.push({ id, type: "sound" });
-            }
-        }
-
-        return items;
-    }
-
     protected handleInsert(): void {
         if (this.stack.length === 0) {
             new Notice("Add at least one sound to the soundscape.");
@@ -274,5 +257,18 @@ export class SoundscapeInsertModal extends BaseInsertModal {
     protected onModalClose(): void {
         this.stackView?.destroy();
         this.stackView = null;
+    }
+
+    protected updatePreviewVisibility(): void {
+        if (!this.previewSection) return;
+
+        const shouldShow = this.stack.length > 0;
+
+        this.previewSection.toggleClass("hidden", !shouldShow);
+    }
+
+
+    protected async startPreview(): Promise<void> {
+        await this.plugin.playbackController.previewSoundscape(this.stack);
     }
 }
