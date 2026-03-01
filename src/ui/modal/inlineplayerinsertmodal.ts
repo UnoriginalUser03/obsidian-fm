@@ -1,5 +1,5 @@
 // ui/InlinePlayerInsertModal.ts
-import { App, Notice, Setting } from "obsidian";
+import { App, Notice, setIcon, Setting } from "obsidian";
 import type { SuggestItem, InsertResult, RepeatMode, MediaType } from "src/api/types";
 import ObsidianFMPlugin from "src/main";
 import { BaseInsertModal } from "./baseinsertmodal";
@@ -15,6 +15,7 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
     private random = false;
     private volume = 1;
     private overrideSettings = false;
+    private searchInputEl: HTMLInputElement | null = null;
 
     constructor(
         app: App,
@@ -52,19 +53,25 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
     }
 
     // ------------------------------------------------------------
-    // SEARCH FIELD INITIALIZATION
-    // ------------------------------------------------------------
-    protected onSearchReady(inputEl: HTMLInputElement) {
-        if (this.trackTitle) {
-            inputEl.value = this.trackTitle;
-        }
-    }
-
-    // ------------------------------------------------------------
     // BODY RENDERING
     // ------------------------------------------------------------
     protected renderBody(container: HTMLElement): void {
-        // Editing an existing item
+        container.empty();
+
+        const isInvalid = this.isEditing && !this.isInitialSelectionValid();
+        if (isInvalid && this.searchInputEl) {
+            const parent = this.searchInputEl.parentElement; // Setting.controlEl
+            if (parent) {
+                const icon = createSpan({ cls: "inline-error-icon-search" });
+                setIcon(icon, "alert-triangle");
+                icon.setAttr("title", "This item no longer exists");
+
+                parent.insertBefore(icon, this.searchInputEl);
+            }
+
+            this.searchInputEl.classList.add("inline-error-input");
+        }
+
         if (this.selectedId && this.selectedType) {
             const item: SuggestItem = {
                 id: this.selectedId,
@@ -78,7 +85,6 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
             return;
         }
 
-        // No selection → hide body
         container.empty();
         this.updateBodyVisibility(false);
     }
@@ -152,6 +158,14 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
         }
     }
 
+    protected onSearchReady(inputEl: HTMLInputElement) {
+        this.searchInputEl = inputEl;
+
+        if (this.trackTitle) {
+            inputEl.value = this.trackTitle;
+        }
+    }
+
     // ------------------------------------------------------------
     // AUTOCOMPLETE
     // ------------------------------------------------------------
@@ -199,6 +213,23 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
 
         // NEW: update preview button visibility
         this.updatePreviewVisibility();
+    }
+
+    private isInitialSelectionValid(): boolean {
+        if (!this.selectedId || !this.selectedType) return true;
+
+        switch (this.selectedType) {
+            case "track":
+                return this.plugin.music.some(t => t.id === this.selectedId);
+            case "sound":
+                return this.plugin.sounds.some(s => s.id === this.selectedId);
+            case "playlist":
+                return this.plugin.playlists.some(p => p.id === this.selectedId);
+            case "soundboard":
+                return this.plugin.soundboards.some(sb => sb.id === this.selectedId);
+            default:
+                return false;
+        }
     }
 
     // ------------------------------------------------------------

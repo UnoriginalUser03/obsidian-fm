@@ -31,7 +31,7 @@ export class SoundboardButton extends InlineButton {
     if (this.applyBaseTooltip()) return;
 
     // Tooltip + icon: invalid handled here
-    if (this.applyWarningIconIfInvalid()) {
+    if (this.applyInvalid()) {
       this.el.title = "Soundboard not found in KenkuFM";
       return;
     }

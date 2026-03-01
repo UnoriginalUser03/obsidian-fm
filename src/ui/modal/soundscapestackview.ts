@@ -48,7 +48,6 @@ export class SoundscapeStackView {
 
         if (this.selectedIndex === null) return;
 
-        // Otherwise clear selection
         this.selectedIndex = null;
         this.onSelect(null);
         this.update();
@@ -62,6 +61,29 @@ export class SoundscapeStackView {
         return Math.min(max, Math.max(min, value));
     }
 
+    // -----------------------------
+    // VALIDATION
+    // -----------------------------
+    private validateItem(item: SoundscapeItem): boolean {
+        if (item.type === "loop") {
+            return this.soundMap.has(item.id);
+        }
+
+        if (item.type === "random-group") {
+            // Allow empty groups during editing
+            if (item.ids.length === 0) return true;
+
+            if (item.min > item.max) return false;
+            if (item.ids.some(id => !this.soundMap.has(id))) return false;
+            return true;
+        }
+
+        return true;
+    }
+
+    // -----------------------------
+    // RENDER
+    // -----------------------------
     update() {
         const stack = this.getStack();
         this.container.empty();
@@ -76,6 +98,22 @@ export class SoundscapeStackView {
 
             const left = header.createDiv({ cls: "stack-header-left" });
 
+            // -----------------------------
+            // VALIDATION + WARNING ICON
+            // -----------------------------
+            const isValid = this.validateItem(item);
+
+            if (!isValid) {
+                header.classList.add("stack-error");
+
+                const warn = left.createSpan({ cls: "stack-warning-icon" });
+                setIcon(warn, "alert-triangle");
+                warn.setAttr("title", "This item has errors");
+            }
+
+            // -----------------------------
+            // SELECTION HANDLER
+            // -----------------------------
             header.addEventListener("click", (e) => {
                 const target = e.target as HTMLElement;
                 if (target instanceof HTMLInputElement) return;
@@ -93,6 +131,9 @@ export class SoundscapeStackView {
 
             let body: HTMLElement | null = null;
 
+            // -----------------------------
+            // RANDOM GROUP ITEM
+            // -----------------------------
             if (item.type === "random-group") {
                 const isExpanded = this.expandedGroups.has(index);
                 const displayName = item.label?.trim() || "Flavour Group";
@@ -107,6 +148,9 @@ export class SoundscapeStackView {
                     this.update();
                 };
 
+                // -----------------------------
+                // HEADER CONTENT
+                // -----------------------------
                 if (isExpanded) {
                     const titleInput = left.createEl("input", {
                         type: "text",
@@ -132,7 +176,6 @@ export class SoundscapeStackView {
                         .slice(0, 4);
 
                     let tooltip = previewItems.join("\n");
-
                     if (item.ids.length > 4) {
                         tooltip += `\n(+${item.ids.length - 4} more…)`;
                     }
@@ -141,18 +184,22 @@ export class SoundscapeStackView {
                     timing.setAttr("title", tooltip);
                 }
 
+                // -----------------------------
+                // BODY
+                // -----------------------------
                 body = wrapper.createDiv({ cls: "stack-body" });
                 body.style.display = isExpanded ? "block" : "none";
 
-                let help: HTMLElement | null = null;
-
                 if (isExpanded) {
-                    help = body.createDiv({ cls: "rg-help" });
+                    const help = body.createDiv({ cls: "rg-help" });
                     help.setText(
                         `Random sounds will play every ${item.min}–${item.max} seconds.`
                     );
                 }
 
+                // -----------------------------
+                // MIN / MAX INPUTS (keep current behaviour)
+                // -----------------------------
                 if (isExpanded) {
                     const minInput = left.createEl("input", {
                         type: "number",
@@ -216,6 +263,9 @@ export class SoundscapeStackView {
                     };
                 }
 
+                // -----------------------------
+                // REMOVE BUTTON
+                // -----------------------------
                 const removeBtn = header.createEl("button", { cls: "stack-remove-btn" });
                 setIcon(removeBtn, "trash");
 
@@ -236,6 +286,9 @@ export class SoundscapeStackView {
                     this.update();
                 };
 
+                // -----------------------------
+                // RANDOM GROUP EDITOR
+                // -----------------------------
                 const editor = new RandomGroupItem(
                     body,
                     item,
@@ -250,6 +303,9 @@ export class SoundscapeStackView {
                 editor.render();
             }
 
+            // -----------------------------
+            // LOOP ITEM
+            // -----------------------------
             if (item.type === "loop") {
                 left.createSpan({ text: `${index + 1}. ${item.label}` });
 

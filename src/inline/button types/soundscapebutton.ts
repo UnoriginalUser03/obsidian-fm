@@ -49,7 +49,7 @@ export class SoundscapeButton extends InlineButton {
     if (this.applyBaseTooltip()) return;
 
     // Tooltip + icon: invalid handled here
-    if (this.applyWarningIconIfInvalid()) {
+    if (this.applyInvalid()) {
       this.el.title = "One or more sounds in this soundscape were not found in KenkuFM";
       return;
     }

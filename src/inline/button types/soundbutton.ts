@@ -27,7 +27,7 @@ export class SoundButton extends InlineButton {
     if (this.applyBaseTooltip()) return;
 
     // Tooltip + icon: invalid handled here
-    if (this.applyWarningIconIfInvalid()) {
+    if (this.applyInvalid()) {
       this.el.title = "Sound not found in KenkuFM";
       return;
     }
@@ -37,6 +37,7 @@ export class SoundButton extends InlineButton {
 
     // Playback class
     this.el.classList.toggle("is-playing", isPlaying);
+    this.el.classList.toggle("error", !this.isValid);
 
     // Icon logic
     const newIcon = isPlaying ? "square" : "play";

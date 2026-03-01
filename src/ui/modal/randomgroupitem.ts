@@ -3,52 +3,64 @@ import { setIcon } from "obsidian";
 import type { SoundscapeItem } from "src/api/types";
 
 export class RandomGroupItem {
-  private container: HTMLElement;
-  private group: Extract<SoundscapeItem, { type: "random-group" }>;
-  private onChange: () => void;
-  private onSoftUpdate: () => void;
-  private soundMap: Map<string, string>;
+    private container: HTMLElement;
+    private group: Extract<SoundscapeItem, { type: "random-group" }>;
+    private onChange: () => void;
+    private onSoftUpdate: () => void;
+    private soundMap: Map<string, string>;
 
-  constructor(
-    container: HTMLElement,
-    group: Extract<SoundscapeItem, { type: "random-group" }>,
-    onChange: () => void,
-    onSoftUpdate: () => void,
-    soundMap: Map<string, string>   // ⭐ NEW
-  ) {
-    this.container = container;
-    this.group = group;
-    this.onChange = onChange;
-    this.onSoftUpdate = onSoftUpdate;
-    this.soundMap = soundMap;
-  }
-
-  render() {
-    this.container.empty();
-
-    if (this.group.ids.length === 0) {
-      const empty = this.container.createDiv({ cls: "rg-empty" });
-      empty.setText("No items added yet.");
-      return;
+    constructor(
+        container: HTMLElement,
+        group: Extract<SoundscapeItem, { type: "random-group" }>,
+        onChange: () => void,
+        onSoftUpdate: () => void,
+        soundMap: Map<string, string>
+    ) {
+        this.container = container;
+        this.group = group;
+        this.onChange = onChange;
+        this.onSoftUpdate = onSoftUpdate;
+        this.soundMap = soundMap;
     }
 
-    this.group.ids.forEach((id, idx) => {
-      const row = this.container.createDiv({ cls: "rg-row" });
+    render() {
+        this.container.empty();
 
-      const label = row.createDiv({ cls: "rg-row-label" });
+        // Empty state
+        if (this.group.ids.length === 0) {
+            const empty = this.container.createDiv({ cls: "rg-empty" });
+            empty.setText("No items added yet.");
+            return;
+        }
 
-      // ⭐ Lookup title from map, fallback to ID
-      const title = this.soundMap.get(id) ?? id;
-      label.setText(title);
+        this.group.ids.forEach((id, idx) => {
+            const row = this.container.createDiv({ cls: "rg-row" });
 
-      const removeBtn = row.createEl("button", { cls: "rg-remove" });
-      setIcon(removeBtn, "trash");
+            // Label
+            const label = row.createDiv({ cls: "rg-row-label" });
+            const title = this.soundMap.get(id) ?? id;
+            label.setText(title);
 
-      removeBtn.onclick = (e) => {
-        e.stopPropagation();
-        this.group.ids.splice(idx, 1);
-        this.onChange();
-      };
-    });
-  }
+            // Validation: missing sound
+            if (!this.soundMap.has(id)) {
+                row.classList.add("rg-invalid");
+                row.setAttr("title", "This sound no longer exists");
+            }
+
+            // Remove button
+            const removeBtn = row.createEl("button", { cls: "rg-remove" });
+            setIcon(removeBtn, "trash");
+
+            removeBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.group.ids.splice(idx, 1);
+
+                // Hard update (stack changed)
+                this.onChange();
+
+                // Soft update (validation, Save button state)
+                this.onSoftUpdate();
+            };
+        });
+    }
 }

@@ -257,7 +257,8 @@ export default class ObsidianFMPlugin extends Plugin {
     // Stop all audio
     await this.playbackController.stopAll();
 
-    // Kill random-group timers
+    // Kill random-group timers - Stop All should already do this with Stop soundscape
+    // But if any are lingering, this will kill them off 
     for (const timers of this.playbackController.randomGroupTimers.values()) {
       for (const t of timers) clearTimeout(t);
     }

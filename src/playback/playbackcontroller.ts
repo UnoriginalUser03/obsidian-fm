@@ -22,7 +22,7 @@ export class PlaybackController {
     public previewSnapshot: PlaybackSnapshot | null = null;
     public randomGroupTimers: Map<string, NodeJS.Timeout[]> = new Map();
     public watchPreview: NodeJS.Timer | null = null;
-   
+
     private additivePreviewStarted = false;
     private previewUpdateListeners: Array<() => void> = [];
 
@@ -385,6 +385,25 @@ export class PlaybackController {
         }
 
         s.currentSoundscapeId = snapshot.soundscapeID;
+        // Restart random-group timers for restored soundscape
+        if (snapshot.soundscapeID) {
+            // Clear any old timers just in case
+            const oldTimers = this.randomGroupTimers.get(snapshot.soundscapeID);
+            if (oldTimers) {
+                for (const t of oldTimers) clearTimeout(t);
+                this.randomGroupTimers.delete(snapshot.soundscapeID);
+            }
+
+            // Look up the soundscape definition from inline buttons
+            const sc = this.plugin.inlineButtons.getSoundscapeById(snapshot.soundscapeID);
+            if (sc) {
+                for (const item of sc.items) {
+                    if (item.type === "random-group") {
+                        this.startRandomGroupScheduler(snapshot.soundscapeID, item);
+                    }
+                }
+            }
+        }
 
         if (snapshot.paused && restoredSomething) {
             await new Promise((res) => setTimeout(res, 50));

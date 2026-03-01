@@ -33,7 +33,7 @@ export class PlaylistButton extends InlineButton {
     if (this.applyBaseTooltip()) return;
 
     // Tooltip + icon: invalid handled here
-    if (this.applyWarningIconIfInvalid()) {
+    if (this.applyInvalid()) {
       this.el.title = "Playlist not found in KenkuFM";
       return;
     }

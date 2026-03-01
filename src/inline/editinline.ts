@@ -36,17 +36,17 @@ class ObsidianFMEditWidget extends WidgetType {
         // Clone the real button to strip playback listeners
         const cleanBtn = realBtn.el.cloneNode(true) as HTMLElement;
 
-        if (cleanBtn.hasClass("obsidianfm-error")) {
-            cleanBtn.classList.remove("obsidianfm-error");
-        }
+
 
         // Add tooltip
-        cleanBtn.setAttribute("aria-label", "Edit ObsidianFM Player");
+        cleanBtn.setAttribute("aria-label", realBtn.isValid ? "Edit ObsidianFM Player" : "Missing References");
         cleanBtn.setAttribute("data-tooltip-position", "top");
 
         if (!this.plugin.kenkuOnline) {
             cleanBtn.classList.add("obsidianfm-disabled");
         }
+
+        cleanBtn.classList.toggle("error", !realBtn.isValid);
 
         // Replace ONLY the left icon with a Lucide pencil
         const iconEl = cleanBtn.querySelector(".obsidianfm-inline-icon") as HTMLElement;

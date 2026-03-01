@@ -33,7 +33,7 @@ export class TrackButton extends InlineButton {
     if (this.applyBaseTooltip()) return;
 
     // Tooltip + icon: invalid handled here
-    if (this.applyWarningIconIfInvalid()) {
+    if (this.applyInvalid()) {
       this.el.title = "Track not found in KenkuFM";
       return;
     }

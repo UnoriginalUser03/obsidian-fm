@@ -205,6 +205,13 @@ export class SoundscapeInsertModal extends BaseInsertModal {
             return;
         }
 
+        for (const item of this.stack) {
+            if (item.type === "random-group" && item.ids.length === 0) {
+                new Notice("Each flavour group must contain at least one sound.");
+                return;
+            }
+        }
+
         this.close();
         this.onSubmit({
             stack: this.stack,

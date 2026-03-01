@@ -38,15 +38,23 @@ export abstract class InlineButton {
   }
 
   /** Applies warning icon if invalid. Returns true if handled. */
-  protected applyWarningIconIfInvalid(): boolean {
+  protected applyInvalid(): boolean {
     if (!this.isValid) {
+      this.el.classList.add("error");
+
       if (this.iconEl.dataset.currentIcon !== "triangle-alert") {
         this.iconEl.dataset.currentIcon = "triangle-alert";
         setIcon(this.iconEl, "triangle-alert");
       }
+
       return true;
     }
+    this.el.classList.remove("error");
+
     return false;
+  }
+  protected applyInvalidClass() {
+    this.el.classList.toggle("error", !this.isValid);
   }
 
   // ------------------------------------------------------------
@@ -89,4 +97,5 @@ export abstract class InlineButton {
   destroy() {
     this.el.remove();
   }
+
 }

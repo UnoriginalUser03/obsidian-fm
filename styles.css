@@ -243,15 +243,61 @@ button.obsidianfm-inline-btn.is-paused .obsidianfm-inline-icon {
   text-overflow: ellipsis;
 }
 
-.obsidianfm-inline-error {
+.inline-error-icon-search {
+  margin-right: 6px;
+  color: var(--color-red);
+  display: inline-flex;
+  align-items: center;
+}
+
+.inline-error-input {
+  border-color: var(--color-red) !important;
+}
+
+.error {
   opacity: 0.6;
   border: 2px solid var(--color-red) !important;
   color: var(--color-red);
 }
 
-.obsidianfm-inline-error .obsidianfm-inline-icon {
+
+.obsidianfm-inline-edit .error {
+  opacity: 1 !important;
+  border: 2px solid var(--color-red) !important;
   color: var(--color-red);
 }
+
+
+.error svg {
+  color: var(--color-red);
+}
+
+.stack-header.stack-error {
+  border: 1px solid var(--color-red);
+  border-radius: 4px;
+  background: rgba(255, 0, 0, 0.06);
+}
+
+.stack-warning-icon {
+  margin: 0 6px;
+  color: var(--color-red);
+  display: flex;
+  align-items: center;
+}
+
+.rg-row.rg-invalid {
+  color: var(--color-red);
+}
+
+.rg-row.rg-invalid .rg-row-label {
+  text-decoration: line-through;
+}
+
+.rg-row.rg-invalid {
+  background: rgba(255, 0, 0, 0.04);
+}
+
+
 
 /* ===================================================== */
 /*                  VOLUME CONTROLS                      */
@@ -655,7 +701,8 @@ button.obsidianfm-repeat-btn.is-active {
 .stack-header {
   display: flex;
   align-items: center;
-  justify-content: space-between; /* DELETE BUTTON ALWAYS RIGHT */
+  justify-content: space-between;
+  /* DELETE BUTTON ALWAYS RIGHT */
   padding: 6px 10px;
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
@@ -742,7 +789,8 @@ button.obsidianfm-repeat-btn.is-active {
 ------------------------------------------------------------ */
 .stack-body {
   margin-top: 6px;
-  padding-left: 26px; /* indent under expand icon */
+  padding-left: 26px;
+  /* indent under expand icon */
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -788,7 +836,7 @@ button.obsidianfm-repeat-btn.is-active {
   color: var(--text-normal);
 }
 
-.hidden { 
+.hidden {
   display: none;
 }
 
@@ -808,7 +856,6 @@ button.obsidianfm-repeat-btn.is-active {
 /* Disabled preview state */
 button.is-disabled {
   opacity: 0.4;
-  pointer-events: none;
 }
 
 .rg-timing {

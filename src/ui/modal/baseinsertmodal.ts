@@ -66,6 +66,7 @@ export abstract class BaseInsertModal extends Modal {
             .addText(t => {
                 t.setValue(this.label);
                 t.onChange(v => (this.label = v));
+                t.setPlaceholder("Enter name...")
             });
 
         // SEARCH FIELD
