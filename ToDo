@@ -1,6 +1,7 @@
 + Update modal preview button depending on whether or not it is playing 
 + Error handling for stacks and random items. 
-+ Add preview for random sounds. 
++ Add preview for random sounds. Showing in sfx panel, and inline button progress
++ Preview snapshot for timers 
 + ui optimisations for modal random group 
 + Reloading plugin can cause random timers to stick. 
 + Stop random timers and add preview modes
