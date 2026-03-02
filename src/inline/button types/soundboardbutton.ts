@@ -10,19 +10,18 @@ export class SoundboardButton extends InlineButton {
     plugin: ObsidianFMPlugin,
     id: string,
     title: string,
+    public kenkuId: string,
+    public kenkuTitle: string,
     private overlapping: boolean = false,
     private random: boolean = false,
   ) {
-    super(plugin, id, "soundboard", title);
+    super(plugin, id, title, "soundboard");
     setIcon(this.iconEl, plugin.typeIconMap["soundboard"]);
   }
 
-  // ------------------------------------------------------------
-  // STATE UPDATE
-  // ------------------------------------------------------------
   updateState() {
     const s = this.plugin.playback;
-    const board = this.plugin.soundboardMap.get(this.id);
+    const board = this.plugin.soundboardMap.get(this.kenkuId);
 
     // Apply disabled state (offline or invalid)
     this.applyDisabledState();
@@ -70,7 +69,7 @@ export class SoundboardButton extends InlineButton {
   // ------------------------------------------------------------
   updateProgress(now: number) {
     const s = this.plugin.playback;
-    const board = this.plugin.soundboardMap.get(this.id);
+    const board = this.plugin.soundboardMap.get(this.kenkuId);
 
     if (!board || !this.isValid) {
       this.el.dataset.progress = "0%";
@@ -127,7 +126,7 @@ export class SoundboardButton extends InlineButton {
 
     const ctrl = this.plugin.playbackController;
     const s = this.plugin.playback;
-    const board = this.plugin.soundboardMap.get(this.id);
+    const board = this.plugin.soundboardMap.get(this.kenkuId);
     if (!board) return;
 
     const playing = board.sounds.filter(id => s.currentSounds.has(id));
@@ -138,7 +137,7 @@ export class SoundboardButton extends InlineButton {
       // NON-OVERLAPPING MODE
       if (!this.overlapping) {
         if (hasPlaying) {
-          await ctrl.stopEntireSoundboard(this.id);
+          await ctrl.stopEntireSoundboard(this.kenkuId);
         } else {
           let soundId: string;
 
@@ -157,7 +156,7 @@ export class SoundboardButton extends InlineButton {
 
       // OVERLAPPING MODE
       if (allPlaying) {
-        await ctrl.stopEntireSoundboard(this.id);
+        await ctrl.stopEntireSoundboard(this.kenkuId);
         return;
       }
 

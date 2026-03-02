@@ -4,14 +4,14 @@ import type { SoundscapeItem } from "src/api/types";
 
 export class RandomGroupItem {
     private container: HTMLElement;
-    private group: Extract<SoundscapeItem, { type: "random-group" }>;
+    private group: Extract<SoundscapeItem, { type: "flavour-group" }>;
     private onChange: () => void;
     private onSoftUpdate: () => void;
     private soundMap: Map<string, string>;
 
     constructor(
         container: HTMLElement,
-        group: Extract<SoundscapeItem, { type: "random-group" }>,
+        group: Extract<SoundscapeItem, { type: "flavour-group" }>,
         onChange: () => void,
         onSoftUpdate: () => void,
         soundMap: Map<string, string>

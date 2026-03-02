@@ -7,9 +7,11 @@ export class SoundButton extends InlineButton {
   constructor(
     plugin: ObsidianFMPlugin,
     id: string,
-    title: string
+    title: string,
+    public kenkuId: string,
+    public kenkuTitle: string,
   ) {
-    super(plugin, id, "sound", title);
+    super(plugin, id, title, "sound");
     setIcon(this.iconEl, plugin.typeIconMap["sound"]);
   }
 
@@ -18,7 +20,7 @@ export class SoundButton extends InlineButton {
   // ------------------------------------------------------------
   updateState() {
     const s = this.plugin.playback;
-    const isPlaying = s.currentSounds.has(this.id);
+    const isPlaying = s.currentSounds.has(this.kenkuId);
 
     // Apply disabled state (offline or invalid)
     this.applyDisabledState();
@@ -53,7 +55,7 @@ export class SoundButton extends InlineButton {
   // ------------------------------------------------------------
   updateProgress(now: number) {
     const s = this.plugin.playback;
-    const entry = s.currentSounds.get(this.id);
+    const entry = s.currentSounds.get(this.kenkuId);
 
     if (!entry || !this.isValid) {
       if (this.el.dataset.progress !== "0%") {
@@ -106,13 +108,13 @@ export class SoundButton extends InlineButton {
     const ctrl = this.plugin.playbackController;
     const s = this.plugin.playback;
 
-    const isPlaying = s.currentSounds.has(this.id);
+    const isPlaying = s.currentSounds.has(this.kenkuId);
 
     try {
       if (isPlaying) {
-        await ctrl.stopSoundEffect(this.id);
+        await ctrl.stopSoundEffect(this.kenkuId);
       } else {
-        await ctrl.playSoundEffect(this.id);
+        await ctrl.playSoundEffect(this.kenkuId);
       }
     } catch {
       this.plugin.connection.handleDisconnect();

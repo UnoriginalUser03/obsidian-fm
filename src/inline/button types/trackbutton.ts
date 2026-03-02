@@ -8,11 +8,13 @@ export class TrackButton extends InlineButton {
     plugin: ObsidianFMPlugin,
     id: string,
     title: string,
+    public kenkuId: string,
+    public kenkuTitle: string,
     private shuffle?: boolean,
     private repeat?: "track" | "playlist" | "off",
-    private volume?: number
+    private volume?: number,
   ) {
-    super(plugin, id, "track", title);
+    super(plugin, id, title, "track");
     setIcon(this.iconEl, plugin.typeIconMap["track"]);
   }
 
@@ -22,7 +24,7 @@ export class TrackButton extends InlineButton {
   updateState() {
     const s = this.plugin.playback;
 
-    const isCurrent = s.currentTrackId === this.id;
+    const isCurrent = s.currentTrackId === this.kenkuId;
     const isPaused = isCurrent && s.paused;
     const isPlaying = isCurrent && !s.paused;
 
@@ -63,7 +65,7 @@ export class TrackButton extends InlineButton {
   updateProgress(now: number) {
     const s = this.plugin.playback;
 
-    if (s.currentTrackId !== this.id) {
+    if (s.currentTrackId !== this.kenkuId) {
       if (this.el.dataset.progress !== "0%") {
         this.el.dataset.progress = "0%";
         this.el.style.setProperty("--progress", "0%");
@@ -120,7 +122,7 @@ export class TrackButton extends InlineButton {
     const ctrl = this.plugin.playbackController;
     const s = this.plugin.playback;
 
-    const isCurrent = s.currentTrackId === this.id;
+    const isCurrent = s.currentTrackId === this.kenkuId;
 
     try {
       if (isCurrent) {
@@ -134,7 +136,7 @@ export class TrackButton extends InlineButton {
           await ctrl.Pause();
         }
       } else {
-        await ctrl.playTrack(this.id, {
+        await ctrl.playTrack(this.kenkuId, {
           shuffle: this.shuffle,
           repeat: this.repeat,
           volume: this.volume

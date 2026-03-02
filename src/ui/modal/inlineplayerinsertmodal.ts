@@ -5,9 +5,9 @@ import ObsidianFMPlugin from "src/main";
 import { BaseInsertModal } from "./baseinsertmodal";
 
 export class InlinePlayerInsertModal extends BaseInsertModal {
-    private selectedId: string | null = null;
+    private kenkuTitle: string = "";
+    private kenkuId: string | null = null;
     private selectedType: MediaType | null = null;
-    private trackTitle = "";
 
     private repeat: RepeatMode = "off";
     private shuffle = false;
@@ -34,10 +34,12 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
     }
 
     private applyInitialConfig(config: Record<string, string>) {
-        this.selectedId = config.id ?? null;
+        this.buttonId = config.id ?? crypto.randomUUID();
+        this.kenkuId = config.kenkuId ?? "";
         this.selectedType = config.type as MediaType ?? null;
-        this.trackTitle = config.trackTitle ?? "";
-        this.label = config.title ?? "";
+        this.title = config.title ?? "";
+        this.kenkuTitle = config.kenkuTitle ?? "";
+
 
         if (config.repeat) this.repeat = config.repeat as RepeatMode;
         if (config.shuffle) this.shuffle = config.shuffle === "true";
@@ -49,7 +51,7 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
     }
 
     protected getTitle(): string {
-        return this.selectedId ? "Edit ObsidianFM Player" : "Insert ObsidianFM Player";
+        return this.kenkuId ? "Edit ObsidianFM Player" : "Insert ObsidianFM Player";
     }
 
     // ------------------------------------------------------------
@@ -73,10 +75,10 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
             this.searchInputEl.classList.add("inline-error-input");
         }
 
-        if (this.selectedId && this.selectedType) {
+        if (this.kenkuId && this.selectedType) {
             const item: SuggestItem = {
-                id: this.selectedId,
-                label: this.trackTitle,
+                id: this.kenkuId,
+                label: this.kenkuTitle,
                 type: this.selectedType as any,
                 icon: this.plugin.typeIconMap[this.selectedType as any],
                 subtitle: ""
@@ -162,8 +164,8 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
     protected onSearchReady(inputEl: HTMLInputElement) {
         this.searchInputEl = inputEl;
 
-        if (this.trackTitle) {
-            inputEl.value = this.trackTitle;
+        if (this.kenkuTitle) {
+            inputEl.value = this.kenkuTitle;
         }
     }
 
@@ -204,9 +206,9 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
     }
 
     protected handleAutocompleteSelect(item: SuggestItem): void {
-        this.selectedId = item.id;
+        this.kenkuId = item.id;
         this.selectedType = item.type;
-        this.trackTitle = item.label;
+        this.kenkuTitle = item.label;
 
         if (this.bodySection) {
             this.renderProperties(this.bodySection, item);
@@ -224,17 +226,17 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
     }
 
     private isInitialSelectionValid(): boolean {
-        if (!this.selectedId || !this.selectedType) return true;
+        if (!this.kenkuId || !this.selectedType) return true;
 
         switch (this.selectedType) {
             case "track":
-                return this.plugin.music.some(t => t.id === this.selectedId);
+                return this.plugin.music.some(t => t.id === this.kenkuId);
             case "sound":
-                return this.plugin.sounds.some(s => s.id === this.selectedId);
+                return this.plugin.sounds.some(s => s.id === this.kenkuId);
             case "playlist":
-                return this.plugin.playlists.some(p => p.id === this.selectedId);
+                return this.plugin.playlists.some(p => p.id === this.kenkuId);
             case "soundboard":
-                return this.plugin.soundboards.some(sb => sb.id === this.selectedId);
+                return this.plugin.soundboards.some(sb => sb.id === this.kenkuId);
             default:
                 return false;
         }
@@ -256,11 +258,11 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
 
     protected async startPreview(): Promise<void> {
         const ctrl = this.plugin.playbackController;
-        if (!this.selectedId || !this.selectedType) {
+        if (!this.kenkuId || !this.selectedType) {
             new Notice("Nothing to preview.");
             return;
         }
-        await ctrl.enterPreviewMode(this.selectedId, this.selectedType, {
+        await ctrl.enterPreviewMode(this.kenkuId, this.selectedType, {
             additive: true,
             override: this.getPreviewOverrides()
         });
@@ -270,7 +272,7 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
     // INSERT HANDLER
     // ------------------------------------------------------------
     protected handleInsert(): void {
-        if (!this.selectedId || !this.selectedType) {
+        if (!this.kenkuId || !this.selectedType) {
             new Notice("Please select an item first.");
             return;
         }
@@ -278,10 +280,11 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
         this.close();
 
         const result: InsertResult = {
-            title: this.label || this.trackTitle,
-            trackTitle: this.trackTitle,
-            trackId: this.selectedId,
-            type: this.selectedType as any,
+            title: this.title || this.kenkuTitle,
+            id: this.buttonId || crypto.randomUUID(),
+            kenkuTitle: this.kenkuTitle,
+            kenkuId: this.kenkuId,
+            type: this.selectedType,
             random: this.random,
             overlapping: this.overlapping,
             shuffle: this.shuffle,
@@ -296,7 +299,7 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
     protected updatePreviewVisibility(): void {
         if (!this.previewSection) return;
 
-        const shouldShow = this.selectedId !== null;
+        const shouldShow = this.kenkuId !== null;
 
         this.previewSection.toggleClass("hidden", !shouldShow);
     }

@@ -4,13 +4,14 @@ import type { SuggestItem, InsertResult, SoundscapeItem, MediaType } from "src/a
 import { BaseInsertModal } from "./baseinsertmodal";
 import { SoundscapeStackView } from "./soundscapestackview";
 import ObsidianFMPlugin from "src/main";
+import { Helpers } from "src/helpers/helpers";
 
 export class SoundscapeInsertModal extends BaseInsertModal {
-    private stack: SoundscapeItem[] = [];
+    private soundscape: SoundscapeItem[] = [];
     private selectedStackIndex: number | null = null;
     private expandedGroups = new Set<number>();
 
-    private stackView: SoundscapeStackView | null = null;
+    private soundscapeView: SoundscapeStackView | null = null;
 
     private soundMap = new Map<string, string>();
 
@@ -29,17 +30,19 @@ export class SoundscapeInsertModal extends BaseInsertModal {
             this.soundMap.set(s.id, s.title);
         }
 
-        if (initialConfig?.stack) {
-            this.stack = this.parseStackInline(initialConfig.stack);
+        if (initialConfig?.soundscape) {
+            this.soundscape = Helpers.parseSoundscapeInline(plugin, initialConfig.soundscape);
         }
 
         if (initialConfig?.title) {
-            this.label = initialConfig.title;
+            this.title = initialConfig.title;
         }
+
+        this.buttonId = initialConfig?.id ?? crypto.randomUUID();
     }
 
     protected getTitle(): string {
-        return this.stack.length > 0
+        return this.soundscape.length > 0
             ? "Edit ObsidianFM Soundscape"
             : "Create ObsidianFM Soundscape";
     }
@@ -50,10 +53,10 @@ export class SoundscapeInsertModal extends BaseInsertModal {
 
     private updateSearchPlaceholder(inputEl: HTMLInputElement) {
         const selected =
-            this.selectedStackIndex !== null ? this.stack[this.selectedStackIndex] : null;
+            this.selectedStackIndex !== null ? this.soundscape[this.selectedStackIndex] : null;
 
         inputEl.placeholder =
-            selected?.type === "random-group"
+            selected?.type === "flavour-group"
                 ? "Search one‑shot SFX…"
                 : "Search looping ambience…";
     }
@@ -61,9 +64,9 @@ export class SoundscapeInsertModal extends BaseInsertModal {
     protected renderBody(container: HTMLElement): void {
         const listContainer = container.createDiv({ cls: "soundscape-stack-container" });
 
-        this.stackView = new SoundscapeStackView(
+        this.soundscapeView = new SoundscapeStackView(
             listContainer,
-            () => this.stack,
+            () => this.soundscape,
             index => this.handleSelectStackItem(index),
 
             () => {
@@ -85,7 +88,7 @@ export class SoundscapeInsertModal extends BaseInsertModal {
             .addButton(btn => {
                 btn.setButtonText("Add").onClick(() => {
                     this.addRandomGroup();
-                    this.stackView?.update();
+                    this.soundscapeView?.update();
                     this.refreshAutocomplete();
                     this.updatePreviewVisibility();
 
@@ -94,7 +97,7 @@ export class SoundscapeInsertModal extends BaseInsertModal {
                 });
             });
 
-        this.stackView.update();
+        this.soundscapeView.update();
         this.updatePreviewVisibility();
     }
 
@@ -108,9 +111,9 @@ export class SoundscapeInsertModal extends BaseInsertModal {
 
     protected buildAutocompleteItems(): SuggestItem[] {
         const selected =
-            this.selectedStackIndex !== null ? this.stack[this.selectedStackIndex] : null;
+            this.selectedStackIndex !== null ? this.soundscape[this.selectedStackIndex] : null;
 
-        if (selected?.type === "random-group") {
+        if (selected?.type === "flavour-group") {
             return this.plugin.sounds
                 .filter(s => !s.loop)
                 .map(s => ({
@@ -144,8 +147,8 @@ export class SoundscapeInsertModal extends BaseInsertModal {
     protected handleAutocompleteSelect(item: SuggestItem): void {
         const idx = this.selectedStackIndex;
 
-        if (idx !== null && this.stack[idx].type === "random-group") {
-            const group = this.stack[idx];
+        if (idx !== null && this.soundscape[idx].type === "flavour-group") {
+            const group = this.soundscape[idx];
 
             if (group.ids.includes(item.id)) {
                 new Notice("This sound is already in the group.");
@@ -154,42 +157,42 @@ export class SoundscapeInsertModal extends BaseInsertModal {
             }
 
             group.ids.push(item.id);
-            this.stackView?.update();
+            this.soundscapeView?.update();
             this.updatePreviewVisibility();
             this.closeAutocomplete();
             return;
         }
 
-        if (this.stack.some(s => s.type === "loop" && s.id === item.id)) {
+        if (this.soundscape.some(s => s.type === "loop" && s.id === item.id)) {
             new Notice("This sound is already in the stack.");
             this.closeAutocomplete();
             return;
         }
 
-        this.stack.push({
+        this.soundscape.push({
             type: "loop",
             id: item.id,
             label: item.label
         });
 
-        this.stackView?.update();
+        this.soundscapeView?.update();
         this.updatePreviewVisibility();
         this.closeAutocomplete();
     }
 
     protected handleInsert(): void {
-        if (this.stack.length === 0) {
+        if (this.soundscape.length === 0) {
             new Notice("Add at least one sound to the soundscape.");
             return;
         }
 
-        if (this.label.trim() === "") {
+        if (this.title.trim() === "") {
             new Notice("Please enter a name for the soundscape.");
             return;
         }
 
-        for (const item of this.stack) {
-            if (item.type === "random-group" && item.ids.length === 0) {
+        for (const item of this.soundscape) {
+            if (item.type === "flavour-group" && item.ids.length === 0) {
                 new Notice("Each flavour group must contain at least one sound.");
                 return;
             }
@@ -197,78 +200,40 @@ export class SoundscapeInsertModal extends BaseInsertModal {
 
         this.close();
         this.onSubmit({
-            stack: this.stack,
-            title: this.label,
+            soundscape: this.soundscape,
+            title: this.title,
+            id: this.buttonId,
             type: "soundscape"
         });
     }
 
     private addRandomGroup() {
-        this.stack.push({
-            type: "random-group",
+        this.soundscape.push({
+            type: "flavour-group",
             label: "Flavour Group",
             ids: [],
             min: 20,
             max: 60
         });
 
-        this.selectedStackIndex = this.stack.length - 1;
+        this.selectedStackIndex = this.soundscape.length - 1;
     }
 
-    private parseStackInline(raw: string): SoundscapeItem[] {
-        const parts = raw.split(",").map(s => s.trim());
-        const items: SoundscapeItem[] = [];
-
-        // 1 = optional name (may be undefined)
-        // 2 = ids
-        // 3 = min
-        // 4 = max
-        const regex = /^random\((?:([^:]+):)?([^)]+)\)\[(\d+)-(\d+)\]$/;
-
-        for (const p of parts) {
-            const match = p.match(regex);
-
-            if (match) {
-                const name = match[1] ? match[1].trim() : "Flavour Group";
-                const ids = match[2].split("|");
-                const min = Number(match[3]);
-                const max = Number(match[4]);
-
-                items.push({
-                    type: "random-group",
-                    label: name,
-                    ids,
-                    min,
-                    max
-                });
-
-                continue;
-            }
-
-            items.push({
-                type: "loop",
-                id: p,
-                label: this.plugin.sounds.find(s => s.id === p)?.title ?? p
-            });
-        }
-
-        return items;
-    }
     protected onModalClose(): void {
-        this.stackView?.destroy();
-        this.stackView = null;
+        this.soundscapeView?.destroy();
+        this.soundscapeView = null;
     }
 
     protected updatePreviewVisibility(): void {
         if (!this.previewSection) return;
 
-        const shouldShow = this.stack.length > 0;
+        const shouldShow = this.soundscape.length > 0;
 
         this.previewSection.toggleClass("hidden", !shouldShow);
     }
 
 
     protected async startPreview(): Promise<void> {
-        await this.plugin.playbackController.previewSoundscape(this.stack);
+        await this.plugin.playbackController.previewSoundscape(this.soundscape);
     }
 }

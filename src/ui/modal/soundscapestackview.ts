@@ -5,7 +5,7 @@ import { RandomGroupItem } from "./randomgroupitem";
 
 export class SoundscapeStackView {
     private container: HTMLElement;
-    private getStack: () => SoundscapeItem[];
+    private getSoundscape: () => SoundscapeItem[];
     private onSelect: (index: number | null) => void;
     private onChange: () => void;
     private onSoftUpdate: () => void;
@@ -16,7 +16,7 @@ export class SoundscapeStackView {
 
     constructor(
         container: HTMLElement,
-        getStack: () => SoundscapeItem[],
+        getSoundscape: () => SoundscapeItem[],
         onSelect: (index: number | null) => void,
         onChange: () => void,
         onSoftUpdate: () => void,
@@ -24,7 +24,7 @@ export class SoundscapeStackView {
         soundMap: Map<string, string>
     ) {
         this.container = container;
-        this.getStack = getStack;
+        this.getSoundscape = getSoundscape;
         this.onSelect = onSelect;
         this.onChange = onChange;
         this.onSoftUpdate = onSoftUpdate;
@@ -69,7 +69,7 @@ export class SoundscapeStackView {
             return this.soundMap.has(item.id);
         }
 
-        if (item.type === "random-group") {
+        if (item.type === "flavour-group") {
             // Allow empty groups during editing
             if (item.ids.length === 0) return true;
 
@@ -85,12 +85,12 @@ export class SoundscapeStackView {
     // RENDER
     // -----------------------------
     update() {
-        const stack = this.getStack();
+        const soundscape = this.getSoundscape();
         this.container.empty();
 
         this.container.createEl("h4", { text: "Stack Items" });
 
-        stack.forEach((item, index) => {
+        soundscape.forEach((item, index) => {
             const wrapper = this.container.createDiv({ cls: "stack-item" });
 
             const header = wrapper.createDiv({ cls: "stack-header" });
@@ -134,7 +134,7 @@ export class SoundscapeStackView {
             // -----------------------------
             // RANDOM GROUP ITEM
             // -----------------------------
-            if (item.type === "random-group") {
+            if (item.type === "flavour-group") {
                 const isExpanded = this.expandedGroups.has(index);
                 const displayName = item.label?.trim() || "Flavour Group";
 
@@ -271,8 +271,8 @@ export class SoundscapeStackView {
 
                 removeBtn.onclick = (e) => {
                     e.stopPropagation();
-                    const stack = this.getStack();
-                    stack.splice(index, 1);
+                    const soundscape = this.getSoundscape();
+                    soundscape.splice(index, 1);
 
                     if (this.selectedIndex === index) {
                         this.selectedIndex = null;
@@ -314,8 +314,8 @@ export class SoundscapeStackView {
 
                 removeBtn.onclick = (e) => {
                     e.stopPropagation();
-                    const stack = this.getStack();
-                    stack.splice(index, 1);
+                    const soundscape = this.getSoundscape();
+                    soundscape.splice(index, 1);
 
                     if (this.selectedIndex === index) {
                         this.selectedIndex = null;

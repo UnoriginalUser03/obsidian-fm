@@ -1,4 +1,4 @@
-import { RepeatMode, MediaType, PreviewItem, PendingTimer } from "src/api/types";
+import { RepeatMode, MediaType, PreviewItem, PendingTimer, CurrentSound } from "src/api/types";
 
 export class PlaybackState {
   // Track / playlist
@@ -9,7 +9,7 @@ export class PlaybackState {
   // SFX + soundboard sounds
   currentSounds: Map<
     string,
-    { progress: number; duration: number; frozen?: boolean }
+    CurrentSound
   > = new Map();
 
   // Preview

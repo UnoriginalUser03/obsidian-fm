@@ -11,7 +11,7 @@ export class SoundscapeButton extends InlineButton {
     title: string,
     public items: SoundscapeItem[]
   ) {
-    super(plugin, id, "soundscape", title);
+    super(plugin, id, title, "soundscape");
     setIcon(this.iconEl, plugin.typeIconMap["soundscape"]);
   }
 

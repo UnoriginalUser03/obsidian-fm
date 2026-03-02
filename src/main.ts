@@ -22,6 +22,7 @@ import { VIEW_TYPE_OBSIDIANFM } from "./ui/player/playerview";
 import { PlaybackController } from "./playback/playbackcontroller";
 import { InlinePlayerInsertModal } from "./ui/modal/inlineplayerinsertmodal";
 import { SoundscapeInsertModal } from "./ui/modal/soundscapeinsertmodal";
+import { Helpers } from "./helpers/helpers";
 
 const DEFAULT_SETTINGS: ObsidianFMSettings = {
   baseUrl: "http://127.0.0.1:3333",
@@ -115,7 +116,7 @@ export default class ObsidianFMPlugin extends Plugin {
           this.app,
           this,
           (result) => {
-            editor.replaceSelection(this.buildInlineCode(result));
+            editor.replaceSelection(Helpers.buildInlineCode(result));
           },
         ).open();
       },
@@ -134,7 +135,7 @@ export default class ObsidianFMPlugin extends Plugin {
           this.app,
           this,
           (result) => {
-            editor.replaceSelection(this.buildInlineCode(result));
+            editor.replaceSelection(Helpers.buildInlineCode(result));
           },
         ).open();
       },
@@ -169,7 +170,7 @@ export default class ObsidianFMPlugin extends Plugin {
                 this.app,
                 this,
                 (result) => {
-                  editor.replaceSelection(this.buildInlineCode(result));
+                  editor.replaceSelection(Helpers.buildInlineCode(result));
                 },
                 () => { },
                 initialConfig
@@ -196,7 +197,7 @@ export default class ObsidianFMPlugin extends Plugin {
                 this.app,
                 this,
                 (result) => {
-                  editor.replaceSelection(this.buildInlineCode(result));
+                  editor.replaceSelection(Helpers.buildInlineCode(result));
                 },
                 () => { },
                 initialConfig
@@ -214,7 +215,7 @@ export default class ObsidianFMPlugin extends Plugin {
         const raw = codeEl.innerText.trim();
         if (!raw.startsWith("obsidianfm:")) return;
 
-        const config = this.parseInlineKenku(raw);
+        const config = Helpers.parseInlineKenku(raw);
         const btn = this.inlineButtons.createFromConfig(config);
         if (btn) codeEl.replaceWith(btn.el);
       });
@@ -272,83 +273,6 @@ export default class ObsidianFMPlugin extends Plugin {
 
     // Stop interpolation loop
     this.playbackInterpolator.stop();
-  }
-  public buildInlineCode(result: InsertResult): string {
-    const params: string[] = [];
-
-    if (result.title) params.push(`title="${result.title}"`);
-    if (result.trackTitle) params.push(`trackTitle="${result.trackTitle}"`)
-    if (result.trackId) params.push(`id="${result.trackId}"`);
-    if (result.type) params.push(`type="${result.type}"`);
-
-    if (result.overrideSettings && (result.type === "track" || result.type === "playlist")) {
-      params.push(`overrideSettings="${result.overrideSettings ? "true" : "false"}"`)
-      if (result.repeat) {
-        params.push(`repeat="${result.repeat}"`);
-      }
-
-      if (result.volume !== undefined) {
-        params.push(`volume="${result.volume}"`);
-      }
-
-      if (result.shuffle !== undefined) {
-        params.push(`shuffle="${result.shuffle ? "true" : "false"}"`);
-      }
-    }
-
-    if (result.type === "soundscape" && !result.trackId) {
-      params.push(`id="${crypto.randomUUID()}"`);
-    }
-
-    if (result.type === "soundboard") {
-      params.push(`random="${result.random ? "true" : "false"}"`);
-      params.push(`overlapping="${result.overlapping ? "true" : "false"}"`);
-    }
-
-    if (result.type === "soundscape" && result.stack?.length) {
-      const serialized = result.stack.map(item => this.serializeSoundscapeItem(item)).join(",");
-      params.push(`stack="${serialized}"`);
-    }
-
-    return `\u200B\`obsidianfm: ${params.join(" ")}\`\u200B`;
-  }
-
-  public parseInlineKenku(raw: string): Record<string, string> {
-    const text = raw.replace("obsidianfm:", "").trim();
-    const result: Record<string, string> = {};
-
-    const regex = /(\w+)=("[^"]*"|\S+)/g;
-    let match: RegExpExecArray | null;
-
-    while ((match = regex.exec(text)) !== null) {
-      const key = match[1];
-      let value = match[2];
-
-      if (value.startsWith('"') && value.endsWith('"')) {
-        value = value.slice(1, -1);
-      }
-
-      result[key] = value;
-    }
-
-    return result;
-  }
-
-  private serializeSoundscapeItem(item: SoundscapeItem): string {
-    if (item.type === "loop") {
-      return item.id;
-    }
-
-    if (item.type === "random-group") {
-      const namePart =
-        item.label && item.label !== "Flavour Group"
-          ? `${item.label}:`
-          : "";
-
-      return `random(${namePart}${item.ids.join("|")})[${item.min}-${item.max}]`;
-    }
-
-    return "";
   }
 
   async openPlaybackPane() {

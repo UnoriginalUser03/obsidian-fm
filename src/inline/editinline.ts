@@ -6,6 +6,7 @@ import { EditorView, ViewPlugin, ViewUpdate, Decoration, DecorationSet, WidgetTy
 import { RangeSetBuilder } from "@codemirror/state";
 import { SoundscapeInsertModal } from "src/ui/modal/soundscapeinsertmodal";
 import { InlinePlayerInsertModal } from "src/ui/modal/inlineplayerinsertmodal";
+import { Helpers } from "src/helpers/helpers";
 
 const INLINE_REGEX = /\u200B?`obsidianfm:([^`]+)`\u200B?/g;
 
@@ -23,7 +24,7 @@ class ObsidianFMEditWidget extends WidgetType {
         const el = document.createElement("span");
         el.classList.add("obsidianfm-inline-edit");
 
-        const config = this.plugin["parseInlineKenku"](this.raw);
+        const config = Helpers.parseInlineKenku(this.raw);
 
         // Create the real button
         const realBtn = this.plugin.inlineButtons.createFromConfig(config);
@@ -31,12 +32,12 @@ class ObsidianFMEditWidget extends WidgetType {
             el.textContent = "ObsidianFM (invalid)";
             return el;
         }
+        
+        realBtn.isEditor = true;
 
         // Clone it to strip playback listeners
         // Clone the real button to strip playback listeners
         const cleanBtn = realBtn.el.cloneNode(true) as HTMLElement;
-
-
 
         // Add tooltip
         cleanBtn.setAttribute("aria-label", realBtn.isValid ? "Edit ObsidianFM Player" : "Missing References");
@@ -65,13 +66,13 @@ class ObsidianFMEditWidget extends WidgetType {
             if (!mdView) return;
 
             const editor = mdView.editor;
-            const mode = config["stack"] ? "soundscape" : "normal";
+            const mode = config["soundscape"] ? "soundscape" : "normal";
 
             const modal = mode == "normal" ? new InlinePlayerInsertModal(
                 this.plugin.app,
                 this.plugin,
                 (result) => {
-                    const newCode = this.plugin["buildInlineCode"](result);
+                    const newCode = Helpers.buildInlineCode(result);
                     editor.replaceRange(
                         newCode,
                         editor.offsetToPos(this.from),
@@ -90,7 +91,7 @@ class ObsidianFMEditWidget extends WidgetType {
                 this.plugin.app,
                 this.plugin,
                 (result) => {
-                    const newCode = this.plugin["buildInlineCode"](result);
+                    const newCode = Helpers.buildInlineCode(result);
                     editor.replaceRange(
                         newCode,
                         editor.offsetToPos(this.from),

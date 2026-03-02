@@ -1,5 +1,10 @@
-+ Timers show progress for inline buttons when last item added or only item playing - maybe have them show in the sfx panel as well to show there is an active t imer?
++ Timer panels allow cancelling - base on button cancellation instead
++ Unify timer panel css and regular sound panel css
++ Separate and clean css file (BOHEMOTH)
++ Overhaul sfx panel. Show based on inline buttons instead? 
 + Disallow editing when button is playing. 
++ Overhaul autcomplete so music always shows under playlist and sound always shows under kenku soundboard. (Clicking functionality remains the same)
++ Idle autocomplete shows parent and children, searching flattens list.
 
 + General polish
 

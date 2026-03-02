@@ -37,7 +37,7 @@ export type SoundscapeItem =
     label: string;
   }
   | {
-    type: "random-group";
+    type: "flavour-group";
     label: string;
     ids: string[];
     min: number;
@@ -101,6 +101,21 @@ export type FilteredEntry = {
   matches: SearchMatches;
 };
 
+export type CurrentSound = {
+  progress: number;
+  duration: number;
+  frozen?: boolean
+}
+
+export interface SoundscapeContext {
+  id: string;                     // soundscape button ID
+  title: string;                  // for SFX panel grouping
+  loopIds: Set<string>;           // loop sounds defined in the soundscape
+  randomIds: Set<string>;         // random-group sounds triggered
+  timerIds: Set<string>;          // timers created by this soundscape
+  ownedSounds: Set<string>;       // all sound IDs this soundscape owns
+}
+
 export interface PendingTimer {
   id: string;          // unique per timer instance
   label: string;       // "Flavour Group" or custom group label
@@ -133,10 +148,11 @@ export interface PlaybackSettingsSnapshot {
 
 export interface InsertResult {
   title?: string;
-  trackTitle?: string;
-  trackId?: string;
+  id?: string;
+  kenkuTitle?: string;
+  kenkuId?: string;
   type?: MediaType;
-  stack?: SoundscapeItem[];
+  soundscape?: SoundscapeItem[];
   overrideSettings?: boolean;
   repeat?: "off" | "playlist" | "track" | "default";
   shuffle?: boolean;

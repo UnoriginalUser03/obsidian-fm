@@ -8,7 +8,8 @@ export abstract class BaseInsertModal extends Modal {
     protected onSubmit: (result: any) => void;
     protected onDelete?: () => void;
 
-    protected label = "";
+    protected title = "";
+    protected buttonId = "";
     protected autocomplete: Autocomplete | null = null;
 
     protected isEditing: boolean = false;
@@ -61,8 +62,8 @@ export abstract class BaseInsertModal extends Modal {
         new Setting(nameSection)
             .setName("Name")
             .addText(t => {
-                t.setValue(this.label);
-                t.onChange(v => (this.label = v));
+                t.setValue(this.title);
+                t.onChange(v => (this.title = v));
                 t.setPlaceholder("Enter name...")
             });
 

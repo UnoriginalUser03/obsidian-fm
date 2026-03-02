@@ -8,11 +8,13 @@ export class PlaylistButton extends InlineButton {
     plugin: ObsidianFMPlugin,
     id: string,
     title: string,
+    public kenkuId: string,
+    public kenkuTitle: string,
     private shuffle?: boolean,
     private repeat?: "track" | "playlist" | "off",
     private volume?: number
   ) {
-    super(plugin, id, "playlist", title);
+    super(plugin, id, title, "playlist");
     setIcon(this.iconEl, plugin.typeIconMap["playlist"]);
   }
 
@@ -22,7 +24,7 @@ export class PlaylistButton extends InlineButton {
   updateState() {
     const s = this.plugin.playback;
 
-    const isCurrent = s.currentPlaylistId === this.id;
+    const isCurrent = s.currentPlaylistId === this.kenkuId;
     const isPaused = isCurrent && s.paused;
     const isPlaying = isCurrent && !s.paused;
 
@@ -48,8 +50,8 @@ export class PlaylistButton extends InlineButton {
     // Icon logic
     const newIcon =
       isPaused ? "play" :
-      isPlaying ? "pause" :
-      "play";
+        isPlaying ? "pause" :
+          "play";
 
     if (this.iconEl.dataset.currentIcon !== newIcon) {
       this.iconEl.dataset.currentIcon = newIcon;
@@ -63,7 +65,7 @@ export class PlaylistButton extends InlineButton {
   updateProgress(now: number) {
     const s = this.plugin.playback;
 
-    if (s.currentPlaylistId !== this.id) {
+    if (s.currentPlaylistId !== this.kenkuId) {
       if (this.el.dataset.progress !== "0%") {
         this.el.dataset.progress = "0%";
         this.el.style.setProperty("--progress", "0%");
@@ -112,7 +114,7 @@ export class PlaylistButton extends InlineButton {
     const ctrl = this.plugin.playbackController;
     const s = this.plugin.playback;
 
-    const isCurrent = s.currentPlaylistId === this.id;
+    const isCurrent = s.currentPlaylistId === this.kenkuId;
 
     try {
       if (isCurrent) {
@@ -126,7 +128,7 @@ export class PlaylistButton extends InlineButton {
           await ctrl.Pause();
         }
       } else {
-        await ctrl.playPlaylist(this.id, {
+        await ctrl.playPlaylist(this.kenkuId, {
           shuffle: this.shuffle,
           repeat: this.repeat,
           volume: this.volume

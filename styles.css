@@ -260,81 +260,6 @@ button.obsidianfm-inline-btn.is-paused .obsidianfm-inline-icon {
   color: var(--color-red);
 }
 
-/* ------------------------------------------------------------
-   TIMERS GROUP
------------------------------------------------------------- */
-
-.obsidianfm-sfx-group.timers-group {
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--background-modifier-border);
-}
-
-/* ------------------------------------------------------------
-   TIMER ITEM
------------------------------------------------------------- */
-
-.obsidianfm-timer-item {
-  display: flex;
-  flex-direction: column;
-  padding: 6px 0;
-  gap: 4px;
-}
-
-.obsidianfm-timer-row {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 6px;
-}
-
-/* Clock icon */
-.obsidianfm-timer-icon {
-  width: 14px;
-  height: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.8;
-}
-
-/* Timer label */
-.obsidianfm-timer-title {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-normal);
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ------------------------------------------------------------
-   TIMER PROGRESS BAR (100 → 0)
------------------------------------------------------------- */
-
-.obsidianfm-timer-progress {
-  height: 4px;
-  width: 100%;
-  background-color: var(--background-modifier-border);
-  border-radius: 2px;
-  overflow: hidden;
-  position: relative;
-}
-
-.obsidianfm-timer-progress::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 100%;
-  /* JS will shrink this from 100 → 0 */
-  background-color: var(--interactive-accent);
-  transition: width 0.15s linear;
-  border-radius: 2px;
-}
-
 
 .obsidianfm-inline-edit .error {
   opacity: 1 !important;
@@ -951,19 +876,21 @@ button.is-disabled {
 .obsidianfm-disabled .setting-item-control {
   filter: grayscale(1);
 }
-
 /* ===================================================== */
 /*                    SFX PLAYBACK LIST                  */
 /* ===================================================== */
+
 /* Container for each SFX item */
 .obsidianfm-sfx-item {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   width: 100%;
   padding: 4px 0;
+  gap: 2px;
 }
 
-/* Row containing title + stop button */
+/* Row containing title + stop button (or icon + title) */
 .obsidianfm-sfx-row {
   display: flex;
   align-items: center;
@@ -987,43 +914,46 @@ button.is-disabled {
 
 /* Progress bar stays on its own line */
 .obsidianfm-sfx-progress {
+  display: block;
+  box-sizing: border-box;
   height: 3px;
   background: var(--interactive-accent);
   width: 0%;
-  margin-top: 4px;
+  max-width: 100%;
+  margin-top: 2px;
   border-radius: 2px;
-
-  /* Prevents layout shifts when width animates */
   flex-shrink: 0;
 }
 
+/* Overall SFX container */
 .obsidianfm-sfx-container {
   margin-top: 12px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   width: 100%;
+  box-sizing: border-box;
 }
 
+/* Group card */
 .obsidianfm-sfx-group {
   border: 1px solid var(--interactive-accent);
   border-radius: 8px;
   padding: 8px 12px;
   background-color: var(--background-secondary);
-
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-/* Group header */
+/* Group header (used by both normal SFX groups and soundscape header) */
 .obsidianfm-sfx-group-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-
   font-weight: 600;
   font-size: 1em;
+  margin-bottom: 2px;
 }
 
 /* Icon buttons */
@@ -1032,36 +962,118 @@ button.is-disabled {
   background: transparent !important;
   border: none;
   box-shadow: none !important;
-
-  width: 36px;
-  height: 36px;
-
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-
   cursor: pointer;
   border-radius: 6px;
-
   transition: background-color 0.2s, transform 0.1s;
 }
 
 .obsidianfm-sfx-stop-btn:hover,
 .obsidianfm-sfx-stop-all-btn:hover {
   background-color: var(--background-modifier-hover) !important;
-  transform: scale(1.1);
+  transform: scale(1.05);
 }
 
+/* Playing highlight */
 .obsidianfm-sfx-item.is-playing {
   background-color: var(--interactive-accent);
   color: var(--text-on-accent);
 }
 
-.obsidianfm-sfx-item-name {
-  flex-grow: 1;
-  padding-right: 8px;
+/* Icon spacing */
+.obsidianfm-sfx-icon {
+  margin-right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* ===================================================== */
+/*                SOUNDSCAPE EXTENSIONS                  */
+/* ===================================================== */
+
+/* Match SFX group styling exactly */
+.soundscape-group {
+  border: 1px solid var(--interactive-accent);
+  border-radius: 8px;
+  padding: 8px 12px; /* match SFX group */
+  background-color: var(--background-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 6px; /* match SFX group */
+}
+
+/* Header: identical structure but slightly stronger presence */
+.soundscape-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 4px;      /* adds vertical weight */
+  padding-bottom: 4px;
+  margin-bottom: 6px;    /* space before first timer block */
+}
+
+/* Larger icon to match SFX header visual weight */
+.soundscape-header .obsidianfm-sfx-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+}
+
+/* Slightly larger title for hierarchy */
+.soundscape-title {
+  font-size: 1.15em;
+  font-weight: 650;
+}
+
+/* Timer block spacing */
+.soundscape-timer-block {
+  padding: 8px 0;
+  border-top: 1px solid var(--background-modifier-border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Timer row spacing */
+.obsidianfm-sfx-row.is-timer {
+  padding: 4px 0;
+}
+
+/* “Next in Xs” text */
+.soundscape-timer-next {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-left: auto;
+}
+
+/* Nested timer-sound row: indent only the row */
+.soundscape-timer-sound .obsidianfm-sfx-row {
+  padding-left: 20px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+/* Nested progress bars: aligned + spaced */
+.soundscape-timer-sound .obsidianfm-sfx-progress {
+  margin-left: 20px;
+  max-width: calc(100% - 20px);
+  margin-top: 4px;
+}
+
+/* Loop rows: match timer-sound spacing */
+.is-loop-item .obsidianfm-sfx-row {
+  padding-left: 20px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+.is-loop-item .obsidianfm-sfx-progress {
+  margin-left: 20px;
+  max-width: calc(100% - 20px);
+  margin-top: 4px;
 }

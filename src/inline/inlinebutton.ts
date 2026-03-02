@@ -1,17 +1,21 @@
 import { setIcon } from "obsidian";
 import ObsidianFMPlugin from "src/main";
+import { InlineButtonRegistry } from "./inlinebuttonregistry";
 
 // core/inline/InlineButton.ts
 export abstract class InlineButton {
   public el: HTMLButtonElement;
   public iconEl: HTMLDivElement;
   public isValid: boolean = true;
+  public isEditor: boolean = false;
+
+  private observer: MutationObserver | null = null;
 
   constructor(
     protected plugin: ObsidianFMPlugin,
     public id: string,
+    public title: string,
     public type: string,
-    public title: string
   ) {
     this.el = this.createBaseElement();
     this.attachClickHandler();
@@ -56,6 +60,20 @@ export abstract class InlineButton {
   protected applyInvalidClass() {
     this.el.classList.toggle("error", !this.isValid);
   }
+
+  public attachDomObserver(registry: InlineButtonRegistry) {
+    this.observer = new MutationObserver(() => {
+      if (!document.body.contains(this.el)) {
+        registry.unregister(this);
+        this.observer?.disconnect();
+        this.observer = null;
+      }
+    });
+
+    this.observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+
 
   // ------------------------------------------------------------
   // DOM CREATION

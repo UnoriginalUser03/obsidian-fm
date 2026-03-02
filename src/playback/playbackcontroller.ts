@@ -15,8 +15,10 @@ import {
     PlaybackSettingsSnapshot,
     PlaybackSnapshot,
     RepeatMode,
+    SoundscapeContext,
     SoundscapeItem,
 } from "src/api/types";
+import { SoundscapeButton } from "src/inline/button types/soundscapebutton";
 import ObsidianFMPlugin from "src/main";
 
 export class PlaybackController {
@@ -28,6 +30,7 @@ export class PlaybackController {
 
     private additivePreviewStarted = false;
     private previewUpdateListeners: Array<() => void> = [];
+    private currentSoundscapeContext: SoundscapeContext | null = null;
 
     constructor(private plugin: ObsidianFMPlugin) { }
 
@@ -205,32 +208,55 @@ export class PlaybackController {
     async playSoundscape(id: string, items: SoundscapeItem[]) {
         const s = this.state;
 
+        // Stop previous soundscape if different
         if (s.currentSoundscapeId && s.currentSoundscapeId !== id) {
             await this.stopSoundscape(s.currentSoundscapeId);
         }
 
+        // Build new context
+        const ctx: SoundscapeContext = {
+            id,
+            title: this.plugin.inlineButtons.getPlaybackButton(id)?.title ?? "Soundscape",
+            loopIds: new Set(),
+            randomIds: new Set(),
+            timerIds: new Set(),
+            ownedSounds: new Set(),
+        };
+
+        // Register loops + play them
         for (const item of items) {
             if (item.type === "loop") {
-                await playSound(this.baseUrl, item.id, "sound");
-                s.currentSounds.set(item.id, {
-                    progress: 0,
-                    duration: 0,
-                    frozen: false,
-                });
+                ctx.loopIds.add(item.id);
+
+                const alreadyPlaying = s.currentSounds.has(item.id);
+
+                if (!alreadyPlaying) {
+                    ctx.ownedSounds.add(item.id);
+
+                    await playSound(this.baseUrl, item.id, "sound");
+                    s.currentSounds.set(item.id, {
+                        progress: 0,
+                        duration: 0,
+                        frozen: false,
+                    });
+                }
             }
 
-            if (item.type === "random-group") {
-                this.startRandomGroupScheduler(id, item);
+            if (item.type === "flavour-group") {
+                this.startRandomGroupScheduler(id, item, ctx);
             }
         }
 
+        this.currentSoundscapeContext = ctx;
         s.currentSoundscapeId = id;
         s.resetSoundBaseline(performance.now());
         this.updateUI();
     }
+
     private startRandomGroupScheduler(
         soundscapeId: string,
-        item: Extract<SoundscapeItem, { type: "random-group" }>
+        item: Extract<SoundscapeItem, { type: "flavour-group" }>,
+        ctx?: SoundscapeContext
     ) {
         if (!this.randomGroupTimers.has(soundscapeId)) {
             this.randomGroupTimers.set(soundscapeId, []);
@@ -245,7 +271,7 @@ export class PlaybackController {
 
             const timerId = `${soundscapeId}:${item.label}:${performance.now()}`;
 
-            // Only add timers for REAL soundscapes, not preview
+            // Only track real soundscape timers
             if (soundscapeId !== "__preview_soundscape__") {
                 const pending: PendingTimer = {
                     id: timerId,
@@ -256,31 +282,36 @@ export class PlaybackController {
                 };
 
                 s.pendingTimers.push(pending);
+                ctx?.timerIds.add(timerId);
             }
 
             const t = setTimeout(async () => {
-                // Remove UI timer (real soundscapes only)
+                // Remove UI timer
                 if (soundscapeId !== "__preview_soundscape__") {
                     s.pendingTimers = s.pendingTimers.filter(pt => pt.id !== timerId);
+                    ctx?.timerIds.delete(timerId);
                 }
 
-                const available = item.ids.filter(
-                    (id) => !this.state.currentSounds.has(id)
-                );
-
+                // Pick a sound not currently playing
+                const available = item.ids.filter(id => !s.currentSounds.has(id));
                 if (available.length === 0) {
                     scheduleNext();
                     return;
                 }
 
-                const id =
-                    available[Math.floor(Math.random() * available.length)];
+                const id = available[Math.floor(Math.random() * available.length)];
 
                 try {
-                    await playSound(this.baseUrl, id, "sound");
-                } catch {
-                    // ignore errors
-                }
+                    const alreadyPlaying = s.currentSounds.has(id);
+
+                    if (!alreadyPlaying) {
+                        await playSound(this.baseUrl, id, "sound");
+                        s.currentSounds.set(id, { progress: 0, duration: 0, frozen: false });
+
+                        ctx?.randomIds.add(id);
+                        ctx?.ownedSounds.add(id);
+                    }
+                } catch { }
 
                 scheduleNext();
             }, delayMs);
@@ -293,22 +324,40 @@ export class PlaybackController {
 
     async stopSoundscape(id: string) {
         const s = this.state;
+        const ctx = this.currentSoundscapeContext;
 
-        for (const [sid] of s.currentSounds) {
-            await stopSound(this.baseUrl, "sound", sid);
+        if (!ctx || ctx.id !== id) {
+            // Fallback: old behaviour
+            for (const [sid] of s.currentSounds) {
+                await stopSound(this.baseUrl, "sound", sid);
+            }
+            s.currentSounds.clear();
+            s.pendingTimers = s.pendingTimers.filter(t => t.soundscapeId !== id);
+            s.currentSoundscapeId = null;
+            this.updateUI();
+            return;
         }
-        s.currentSounds.clear();
 
+        // Stop all owned sounds
+        for (const soundId of ctx.ownedSounds) {
+            await stopSound(this.baseUrl, "sound", soundId);
+            s.currentSounds.delete(soundId);
+        }
+
+        // Cancel timers belonging to this soundscape
+        s.pendingTimers = s.pendingTimers.filter(t => !ctx.timerIds.has(t.id));
+
+        // Cancel random-group schedulers
         const timers = this.randomGroupTimers.get(id);
         if (timers) {
             for (const t of timers) clearTimeout(t);
             this.randomGroupTimers.delete(id);
         }
 
-        // Remove UI timers for this soundscape
-        s.pendingTimers = s.pendingTimers.filter(t => t.soundscapeId !== id);
-
+        // Clear context
+        this.currentSoundscapeContext = null;
         s.currentSoundscapeId = null;
+
         this.updateUI();
     }
 
@@ -422,10 +471,10 @@ export class PlaybackController {
             }
 
             // Look up the soundscape definition from inline buttons
-            const sc = this.plugin.inlineButtons.getSoundscapeById(snapshot.soundscapeID);
+            const sc = this.plugin.inlineButtons.getPlaybackButton(snapshot.soundscapeID) as SoundscapeButton;
             if (sc) {
                 for (const item of sc.items) {
-                    if (item.type === "random-group") {
+                    if (item.type === "flavour-group") {
                         this.startRandomGroupScheduler(snapshot.soundscapeID, item);
                     }
                 }
@@ -605,7 +654,7 @@ export class PlaybackController {
                 s.currentSounds.set(item.id, { progress: 0, duration: 0, frozen: false });
             }
 
-            if (item.type === "random-group") {
+            if (item.type === "flavour-group") {
                 this.startRandomGroupScheduler(previewId, item);
             }
         }
