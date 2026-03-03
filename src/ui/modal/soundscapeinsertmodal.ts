@@ -147,20 +147,23 @@ export class SoundscapeInsertModal extends BaseInsertModal {
     protected handleAutocompleteSelect(item: SuggestItem): void {
         const idx = this.selectedStackIndex;
 
-        if (idx !== null && this.soundscape[idx].type === "flavour-group") {
-            const group = this.soundscape[idx];
+        if (idx !== null) {
+            const entry = this.soundscape[idx];
 
-            if (group.ids.includes(item.id)) {
-                new Notice("This sound is already in the group.");
+            if (entry.type === "flavour-group") {
+                // Now TypeScript knows entry is the flavour-group branch
+                if (entry.ids.includes(item.id)) {
+                    new Notice("This sound is already in the group.");
+                    this.closeAutocomplete();
+                    return;
+                }
+
+                entry.ids.push(item.id);
+                this.soundscapeView?.update();
+                this.updatePreviewVisibility();
                 this.closeAutocomplete();
                 return;
             }
-
-            group.ids.push(item.id);
-            this.soundscapeView?.update();
-            this.updatePreviewVisibility();
-            this.closeAutocomplete();
-            return;
         }
 
         if (this.soundscape.some(s => s.type === "loop" && s.id === item.id)) {

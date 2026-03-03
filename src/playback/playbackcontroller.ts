@@ -724,7 +724,11 @@ export class PlaybackController {
         return {
             id,
             title: this.plugin.inlineButtons.getPlaybackButton(id)?.title ?? "Soundscape",
-            loopIds: new Set(items.filter(i => i.type === "loop").map(i => i.id)),
+            loopIds: new Set(
+                items
+                    .filter((i): i is Extract<SoundscapeItem, { type: "loop" }> => i.type === "loop")
+                    .map(i => i.id)
+            ),
             randomIds: new Set(),
             timerIds: new Set(),
             ownedSounds: new Set(),

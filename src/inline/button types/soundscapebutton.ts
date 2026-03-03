@@ -20,8 +20,8 @@ export class SoundscapeButton extends InlineButton {
   // ------------------------------------------------------------
   private getLoopIds(): string[] {
     return this.items
-      .filter(item => item.type === "loop")
-      .map(item => item.id);
+      .filter((i): i is Extract<SoundscapeItem, { type: "loop" }> => i.type === "loop")
+      .map(i => i.id)
   }
 
   private hasRandomActivity(): boolean {
