@@ -1,7 +1,7 @@
 {
   "id": "obsidian-fm",
   "name": "Obsidian FM",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "minAppVersion": "0.15.0",
   "description": "Control playback of sounds and music from Kenku FM in Obsidian.",
   "author": "UnoriginalUser03",
