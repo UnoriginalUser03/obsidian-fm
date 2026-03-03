@@ -2,3 +2,6 @@
 + Separate and clean css file (BOHEMOTH)
 
 + Sync has to do with Kenku keeping stale data. Fixed autocomplete. Syncing requires Kenku restart 
+
+
++ Implement isPaused CSS back? Had to do with if it was first time pause or not.
