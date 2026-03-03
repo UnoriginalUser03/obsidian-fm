@@ -61,43 +61,6 @@ export abstract class InlineButton {
     this.el.classList.toggle("error", !this.isValid);
   }
 
-  /** Automatically unregisters when DOM node is removed */
-  public attachDomObserver(registry: InlineButtonRegistry) {
-    let removedAt: number | null = null;
-
-    this.observer = new MutationObserver(() => {
-      const inDom = document.body.contains(this.el);
-
-      if (inDom) {
-        removedAt = null; // reset if reinserted
-        return;
-      }
-
-      // Mark the time it was first seen as removed
-      if (removedAt === null) {
-        removedAt = performance.now();
-      }
-
-      // Wait 150ms before unregistering to allow pane moves, reflows, etc.
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            const stillMissing = !document.body.contains(this.el);
-            const longEnough = removedAt !== null && performance.now() - removedAt > 150;
-
-            if (stillMissing && longEnough) {
-              registry.unregister(this);
-              this.observer?.disconnect();
-              this.observer = null;
-            }
-          });
-        });
-      });
-    });
-
-    this.observer.observe(document.body, { childList: true, subtree: true });
-  }
-
   // ------------------------------------------------------------
   // DOM CREATION
   // ------------------------------------------------------------

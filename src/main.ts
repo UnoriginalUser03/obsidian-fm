@@ -1,4 +1,4 @@
-import { Events, Notice, Plugin } from "obsidian";
+import { Events, MarkdownRenderChild, Notice, Plugin } from "obsidian";
 import SettingsTab from "./Settings";
 
 import {
@@ -210,14 +210,30 @@ export default class ObsidianFMPlugin extends Plugin {
     );
 
     // Inline buttons
-    this.registerMarkdownPostProcessor((el) => {
+    this.registerMarkdownPostProcessor((el, ctx) => {
       el.querySelectorAll("code").forEach((codeEl) => {
         const raw = codeEl.innerText.trim();
         if (!raw.startsWith("obsidianfm:")) return;
 
         const config = Helpers.parseInlineKenku(raw);
         const btn = this.inlineButtons.createFromConfig(config);
-        if (btn) codeEl.replaceWith(btn.el);
+        if (!btn) return;
+
+        codeEl.replaceWith(btn.el);
+
+        const plugin = this;      // capture plugin instance
+        const button = btn;       // capture non-null button
+
+        const child = new class extends MarkdownRenderChild {
+          constructor() {
+            super(button.el);
+          }
+          onunload() {
+            plugin.inlineButtons.unregister(button);
+          }
+        }();
+
+        ctx.addChild(child);
       });
     });
 

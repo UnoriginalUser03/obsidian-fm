@@ -9,6 +9,7 @@ import { SoundboardButton } from "./button types/soundboardbutton";
 import { SoundscapeButton } from "./button types/soundscapebutton";
 import { Helpers } from "src/helpers/helpers";
 import { EditorInlineButton } from "./button types/editorinlinebutton";
+import { Notice } from "obsidian";
 
 export class InlineButtonRegistry {
   private playerButtons = new Map<string, Set<InlineButton>>();
@@ -117,8 +118,6 @@ export class InlineButtonRegistry {
       btn.updateState();
       btn.updateProgress(performance.now());
     }
-
-    btn.attachDomObserver(this);
   }
   // ------------------------------------------------------------
   // UNREGISTER
@@ -137,7 +136,6 @@ export class InlineButtonRegistry {
         if (set.size === 0) this.playerButtons.delete(btn.id);
       }
     }
-
     btn.destroy();
   }
   // ------------------------------------------------------------

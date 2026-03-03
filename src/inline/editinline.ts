@@ -19,6 +19,7 @@ import { EditorInlineButton } from "./button types/editorinlinebutton";
 const INLINE_REGEX = /\u200B?`obsidianfm:([^`]+)`\u200B?/g;
 
 class ObsidianFMEditWidget extends WidgetType {
+    private button: EditorInlineButton;
     constructor(
         private plugin: ObsidianFMPlugin,
         private raw: string,
@@ -44,9 +45,14 @@ class ObsidianFMEditWidget extends WidgetType {
         );
 
         this.plugin.inlineButtons.register(editorBtn);
+        this.button = editorBtn;
 
         el.appendChild(editorBtn.el);
         return el;
+    }
+
+    destroy(dom: HTMLElement) {
+        if (this.button) this.plugin.inlineButtons.unregister(this.button);
     }
 }
 
