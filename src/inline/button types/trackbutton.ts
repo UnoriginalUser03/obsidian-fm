@@ -42,7 +42,6 @@ export class TrackButton extends InlineButton {
 
     // Playback classes
     this.el.classList.toggle("is-playing", isPlaying);
-    this.el.classList.toggle("is-paused", !isPlaying);
 
     // Icon logic
     const newIcon =
@@ -145,6 +144,6 @@ export class TrackButton extends InlineButton {
 
   isPlaying(): boolean {
     const s = this.plugin.playback;
-    return s.currentPlaylistId === this.kenkuId && !s.paused;
+    return s.currentTrackId === this.kenkuId && !s.paused;
   }
 }

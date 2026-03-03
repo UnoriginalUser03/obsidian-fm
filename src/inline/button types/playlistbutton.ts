@@ -43,12 +43,11 @@ export class PlaylistButton extends InlineButton {
 
     // Playback classes
     this.el.classList.toggle("is-playing", isPlaying);
-    this.el.classList.toggle("is-paused", !isPlaying);
 
     // Icon logic
     const newIcon =
-        isPlaying ? "pause" :
-          "play";
+      isPlaying ? "pause" :
+        "play";
 
     if (this.iconEl.dataset.currentIcon !== newIcon) {
       this.iconEl.dataset.currentIcon = newIcon;
@@ -140,5 +139,4 @@ export class PlaylistButton extends InlineButton {
     const s = this.plugin.playback;
     return s.currentPlaylistId === this.kenkuId && !s.paused;
   }
-
 }
