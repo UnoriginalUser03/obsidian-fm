@@ -125,14 +125,15 @@ export const getSounds = async (baseUrl: string): Promise<Sound[]> => {
     return soundboards.sounds.map((sound) => {
       const playbackSound = playback?.sounds?.find((s) => s.id === sound.id);
       const sb = soundboards.soundboards.find((sb) => sb.sounds.includes(sound.id));
+
       return {
         id: sound.id,
         title: sound.title,
-        soundboardName: sb?.title ?? "Unknown",
+        soundboardName: sb?.title ?? "Ungrouped",
+        soundboardId: sb?.id ?? "__ungrouped__",
         isPlaying: playbackSound != null,
         loop: sound.loop,
       };
-
     });
   } catch (e) {
     console.warn("Could not load soundboards:", e);

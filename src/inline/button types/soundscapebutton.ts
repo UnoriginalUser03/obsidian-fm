@@ -28,6 +28,25 @@ export class SoundscapeButton extends InlineButton {
     return this.plugin.playbackController.randomGroupTimers.has(this.id);
   }
 
+  private getNextTimer(): { remaining: number } | null {
+    const s = this.plugin.playback;
+    const timers = s.pendingTimers.filter(t => t.soundscapeId === this.id);
+    if (timers.length === 0) return null;
+
+    const soonest = timers.sort((a, b) => {
+      const ra = a.duration - (performance.now() - a.startedAt) / 1000;
+      const rb = b.duration - (performance.now() - b.startedAt) / 1000;
+      return ra - rb;
+    })[0];
+
+    const remaining = Math.max(
+      0,
+      soonest.duration - (performance.now() - soonest.startedAt) / 1000
+    );
+
+    return { remaining };
+  }
+
   // ------------------------------------------------------------
   // STATE UPDATE
   // ------------------------------------------------------------
@@ -42,27 +61,18 @@ export class SoundscapeButton extends InlineButton {
 
     const isActive = isSelected && (hasLoopPlaying || hasRandomPlaying);
 
-    // Disabled state (offline or invalid)
     this.applyDisabledState();
-
-    // Tooltip: offline handled here
     if (this.applyBaseTooltip()) return;
 
-    // Tooltip + icon: invalid handled here
     if (this.applyInvalid()) {
       this.el.setAttr("aria-label", "Some sounds were not found in KenkuFM");
       return;
     }
 
-    // Valid tooltip
     this.el.setAttr("aria-label", "Play Soundscape");
-
-    // Playback classes
     this.el.classList.toggle("is-playing", isActive);
 
-    // Icon logic
     const newIcon = isActive ? "square" : "play";
-
     if (this.iconEl.dataset.currentIcon !== newIcon) {
       this.iconEl.dataset.currentIcon = newIcon;
       setIcon(this.iconEl, newIcon);
@@ -81,77 +91,70 @@ export class SoundscapeButton extends InlineButton {
     const hasLoopPlaying = loopIds.some(id => s.currentSounds.has(id));
     const hasRandomPlaying = this.hasRandomActivity();
 
-    // If only random groups are active → show 0% but keep active state
     if (!isSelected || (!hasLoopPlaying && !hasRandomPlaying) || !this.isValid) {
-      if (this.el.dataset.progress !== "0%") {
-        this.el.dataset.progress = "0%";
-        this.el.style.setProperty("--progress", "0%");
-      }
+      this.setProgress("0%");
       return;
     }
 
-    // If no loop sounds → progress stays at 0%
-    if (!hasLoopPlaying) {
-      if (this.el.dataset.progress !== "0%") {
-        this.el.dataset.progress = "0%";
-        this.el.style.setProperty("--progress", "0%");
+    // ------------------------------------------------------------
+    // CASE 1: LOOPS EXIST → TRACK THE LONGEST LOOP
+    // ------------------------------------------------------------
+    if (hasLoopPlaying) {
+      const active = loopIds
+        .map(id => {
+          const entry = s.currentSounds.get(id);
+          return entry ? ([id, entry] as const) : null;
+        })
+        .filter((x): x is readonly [string, { progress: number; duration: number; frozen?: boolean }] => x !== null);
+
+      if (active.length === 0) {
+        this.setProgress("0%");
+        return;
       }
+
+      // Pick the loop with the longest duration (stable)
+      const [soundId, entry] = active.sort((a, b) => b[1].duration - a[1].duration)[0];
+
+      if (entry.duration === 0) {
+        this.setProgress("2%");
+        return;
+      }
+
+      if (!entry.frozen && entry.duration < 2 && entry.progress / entry.duration > 0.9) {
+        entry.frozen = true;
+      }
+
+      if (entry.frozen) {
+        this.setProgress("100%");
+        return;
+      }
+
+      if (!s.lastSoundSyncTime) s.lastSoundSyncTime = now;
+
+      const elapsed = (now - s.lastSoundSyncTime) / 1000;
+      const interpolated = entry.progress + elapsed;
+
+      const percent = Math.min(100, (interpolated / entry.duration) * 100);
+      this.setProgress(`${percent}%`);
       return;
     }
 
-    // Normal loop progress logic
-    const active = loopIds
-      .map(id => {
-        const entry = s.currentSounds.get(id);
-        return entry ? ([id, entry] as const) : null;
-      })
-      .filter(
-        (x): x is readonly [
-          string,
-          { progress: number; duration: number; frozen?: boolean }
-        ] => x !== null
-      );
-
-    if (active.length === 0) {
-      if (this.el.dataset.progress !== "0%") {
-        this.el.dataset.progress = "0%";
-        this.el.style.setProperty("--progress", "0%");
-      }
+    // ------------------------------------------------------------
+    // CASE 2: NO LOOPS → TRACK NEXT FLAVOUR-GROUP TIMER
+    // ------------------------------------------------------------
+    const nextTimer = this.getNextTimer();
+    if (nextTimer) {
+      const max = 60; // treat 60s as full bar for visual clarity
+      const pct = Math.min(100, (1 - nextTimer.remaining / max) * 100);
+      this.setProgress(`${pct}%`);
       return;
     }
 
-    const [soundId, entry] = active.sort(
-      (a, b) => b[1].progress - a[1].progress
-    )[0];
+    // Fallback
+    this.setProgress("0%");
+  }
 
-    if (entry.duration === 0) {
-      if (this.el.dataset.progress !== "2%") {
-        this.el.dataset.progress = "2%";
-        this.el.style.setProperty("--progress", "2%");
-      }
-      return;
-    }
-
-    if (!entry.frozen && entry.duration < 2 && entry.progress / entry.duration > 0.9) {
-      entry.frozen = true;
-    }
-
-    if (entry.frozen) {
-      if (this.el.dataset.progress !== "100%") {
-        this.el.dataset.progress = "100%";
-        this.el.style.setProperty("--progress", "100%");
-      }
-      return;
-    }
-
-    if (!s.lastSoundSyncTime) s.lastSoundSyncTime = now;
-
-    const elapsed = (now - s.lastSoundSyncTime) / 1000;
-    const interpolated = entry.progress + elapsed;
-
-    const percent = Math.min(100, (interpolated / entry.duration) * 100);
-    const pct = `${percent}%`;
-
+  private setProgress(pct: string) {
     if (this.el.dataset.progress !== pct) {
       this.el.dataset.progress = pct;
       this.el.style.setProperty("--progress", pct);
@@ -184,5 +187,17 @@ export class SoundscapeButton extends InlineButton {
     } catch {
       this.plugin.connection.handleDisconnect();
     }
+  }
+
+  isPlaying(): boolean {
+    const s = this.plugin.playback;
+
+    const loopIds = this.getLoopIds();
+    const isSelected = s.currentSoundscapeId === this.id;
+
+    const hasLoopPlaying = loopIds.some(id => s.currentSounds.has(id));
+    const hasRandomPlaying = this.hasRandomActivity();
+
+    return isSelected && (hasLoopPlaying || hasRandomPlaying);
   }
 }

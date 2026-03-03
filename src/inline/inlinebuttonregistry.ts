@@ -8,15 +8,20 @@ import { SoundButton } from "./button types/soundbutton";
 import { SoundboardButton } from "./button types/soundboardbutton";
 import { SoundscapeButton } from "./button types/soundscapebutton";
 import { Helpers } from "src/helpers/helpers";
+import { EditorInlineButton } from "./button types/editorinlinebutton";
 
 export class InlineButtonRegistry {
-  private buttons = new Map<string, Set<InlineButton>>();
+  private playerButtons = new Map<string, Set<InlineButton>>();
+  private editorButtons = new Map<string, Set<EditorInlineButton>>();
 
   constructor(
     private plugin: ObsidianFMPlugin,
     private state: PlaybackState
   ) { }
 
+  // ------------------------------------------------------------
+  // PLAYBACK BUTTON CREATION
+  // ------------------------------------------------------------
   createFromConfig(config: Record<string, string>): InlineButton | null {
     const id = config.id;
     const type = config.type;
@@ -61,52 +66,138 @@ export class InlineButtonRegistry {
         return null;
     }
 
-    btn.isValid = this.validateButton(btn);
-    btn.attachDomObserver(this);
-    if (!this.buttons.has(btn.id)) {
-      this.buttons.set(btn.id, new Set());
-    }
-    this.buttons.get(btn.id)!.add(btn);
+    this.register(btn);
     return btn;
   }
 
-  getPlaybackButton(id: string): InlineButton | null {
-    const group = this.buttons.get(id);
-    if (!group) return null;
+  // ------------------------------------------------------------
+  // REGISTRATION
+  // ------------------------------------------------------------
+  // ------------------------------------------------------------
+  // REGISTRATION
+  // ------------------------------------------------------------
+  register(btn: InlineButton | EditorInlineButton) {
+    if (btn instanceof EditorInlineButton) {
+      // Many editor widgets per ID
+      if (!this.editorButtons.has(btn.id)) {
+        this.editorButtons.set(btn.id, new Set());
+      }
+      this.editorButtons.get(btn.id)!.add(btn);
 
-    for (const btn of group) {
-      if (!btn.isEditor) return btn; // the real one
+      // Mirror validity from playback buttons (if any exist)
+      const playbackSet = this.playerButtons.get(btn.id);
+      if (playbackSet && playbackSet.size > 0) {
+        const first = playbackSet.values().next().value;
+        btn.isValid = first.isValid;
+      }
+
+      btn.updateState();
     }
 
-    return null;
+    else {
+      // Many playback buttons per ID
+      if (!this.playerButtons.has(btn.id)) {
+        this.playerButtons.set(btn.id, new Set());
+      }
+      const set = this.playerButtons.get(btn.id)!;
+      set.add(btn);
+
+      // Validate this playback button
+      btn.isValid = this.validateButton(btn);
+
+      // Push validity to all editor buttons
+      const editors = this.editorButtons.get(btn.id);
+      if (editors) {
+        for (const ed of editors) {
+          ed.isValid = btn.isValid;
+          ed.updateState();
+        }
+      }
+
+      btn.updateState();
+      btn.updateProgress(performance.now());
+    }
+
+    btn.attachDomObserver(this);
+  }
+  // ------------------------------------------------------------
+  // UNREGISTER
+  // ------------------------------------------------------------
+  unregister(btn: InlineButton | EditorInlineButton) {
+    if (btn instanceof EditorInlineButton) {
+      const set = this.editorButtons.get(btn.id);
+      if (set) {
+        set.delete(btn);
+        if (set.size === 0) this.editorButtons.delete(btn.id);
+      }
+    } else {
+      const set = this.playerButtons.get(btn.id);
+      if (set) {
+        set.delete(btn);
+        if (set.size === 0) this.playerButtons.delete(btn.id);
+      }
+    }
+
+    btn.destroy();
+  }
+  // ------------------------------------------------------------
+  // LOOKUP
+  // ------------------------------------------------------------
+  getPlaybackButton(id: string): InlineButton | null {
+    const set = this.playerButtons.get(id);
+    if (!set || set.size === 0) return null;
+    return set.values().next().value; // first instance
   }
 
+  // ------------------------------------------------------------
+  // VALIDATION
+  // ------------------------------------------------------------
   refreshValidity() {
-    for (const group of this.buttons.values()) {
-      for (const btn of group) {
+    // Validate ALL playback button instances
+    for (const set of this.playerButtons.values()) {
+      for (const btn of set) {
         btn.isValid = this.validateButton(btn);
       }
     }
+
+    // Editor buttons mirror playback validity
+    for (const [id, editors] of this.editorButtons.entries()) {
+      const playbackSet = this.playerButtons.get(id);
+
+      // If no playback buttons exist yet, treat as valid (neutral)
+      let valid = true;
+
+      if (playbackSet && playbackSet.size > 0) {
+        // Use the first playback instance as the source of truth
+        const first = playbackSet.values().next().value;
+        valid = first.isValid;
+      }
+
+      for (const ed of editors) {
+        ed.isValid = valid;
+        ed.updateState();
+      }
+    }
+
     this.updateAll(performance.now());
   }
 
   private validateButton(btn: InlineButton): boolean {
+    // Editor buttons never validate themselves
+    if (btn.type === "editor") return true;
+
     switch (btn.type) {
       case "track":
-        const track = btn as TrackButton;
-        return this.plugin.music.some(t => t.id === track.kenkuId);
+        return this.plugin.music.some(t => t.id === (btn as TrackButton).kenkuId);
 
       case "playlist":
-        const playlist = btn as PlaylistButton;
-        return this.plugin.playlists.some(p => p.id === playlist.kenkuId);
+        return this.plugin.playlists.some(p => p.id === (btn as PlaylistButton).kenkuId);
 
       case "sound":
-        const sound = btn as SoundButton;
-        return this.plugin.soundMap.has(sound.kenkuId);
+        return this.plugin.soundMap.has((btn as SoundButton).kenkuId);
 
       case "soundboard":
-        const sb = btn as SoundboardButton;
-        return this.plugin.soundboardMap.has(sb.kenkuId);
+        return this.plugin.soundboardMap.has((btn as SoundboardButton).kenkuId);
 
       case "soundscape":
         const sc = btn as SoundscapeButton;
@@ -118,38 +209,32 @@ export class InlineButtonRegistry {
 
       default:
         return false;
-
     }
   }
 
+  // ------------------------------------------------------------
+  // UPDATE LOOPS
+  // ------------------------------------------------------------
   updateAll(now: number) {
-    for (const group of this.buttons.values()) {
-      for (const btn of group) {
+    for (const set of this.playerButtons.values()) {
+      for (const btn of set) {
         btn.updateState();
-        if (btn.isEditor) continue; // skip editor clones
         btn.updateProgress(now);
+      }
+    }
+
+    for (const set of this.editorButtons.values()) {
+      for (const btn of set) {
+        btn.updateState();
       }
     }
   }
 
   updateProgress(now: number) {
-    for (const group of this.buttons.values()) {
-      for (const btn of group) {
-        if (btn.isEditor) continue;
+    for (const set of this.playerButtons.values()) {
+      for (const btn of set) {
         btn.updateProgress(now);
       }
-    }
-  }
-
-  unregister(btn: InlineButton) {
-    const group = this.buttons.get(btn.id);
-    if (!group) return;
-
-    group.delete(btn);
-    btn.destroy();
-
-    if (group.size === 0) {
-      this.buttons.delete(btn.id);
     }
   }
 }

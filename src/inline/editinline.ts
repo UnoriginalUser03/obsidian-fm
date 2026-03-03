@@ -1,13 +1,21 @@
 // src/inline/edit-inline-extension.ts
-import { App, MarkdownView, setIcon } from "obsidian";
+import { MarkdownView } from "obsidian";
 import ObsidianFMPlugin from "src/main";
 
-import { EditorView, ViewPlugin, ViewUpdate, Decoration, DecorationSet, WidgetType } from "@codemirror/view";
-import { RangeSetBuilder } from "@codemirror/state";
-import { SoundscapeInsertModal } from "src/ui/modal/soundscapeinsertmodal";
-import { InlinePlayerInsertModal } from "src/ui/modal/inlineplayerinsertmodal";
-import { Helpers } from "src/helpers/helpers";
+import {
+    EditorView,
+    ViewPlugin,
+    ViewUpdate,
+    Decoration,
+    DecorationSet,
+    WidgetType
+} from "@codemirror/view";
 
+import { RangeSetBuilder } from "@codemirror/state";
+import { Helpers } from "src/helpers/helpers";
+import { EditorInlineButton } from "./button types/editorinlinebutton";
+
+// Matches: \u200B?`obsidianfm:...`\u200B?
 const INLINE_REGEX = /\u200B?`obsidianfm:([^`]+)`\u200B?/g;
 
 class ObsidianFMEditWidget extends WidgetType {
@@ -26,123 +34,34 @@ class ObsidianFMEditWidget extends WidgetType {
 
         const config = Helpers.parseInlineKenku(this.raw);
 
-        // Create the real button
-        const realBtn = this.plugin.inlineButtons.createFromConfig(config);
-        if (!realBtn) {
-            el.textContent = "ObsidianFM (invalid)";
-            return el;
-        }
-        
-        realBtn.isEditor = true;
+        const editorBtn = new EditorInlineButton(
+            this.plugin,
+            config.id,
+            config.title ?? "Play",
+            config,
+            this.from,
+            this.to
+        );
 
-        // Clone it to strip playback listeners
-        // Clone the real button to strip playback listeners
-        const cleanBtn = realBtn.el.cloneNode(true) as HTMLElement;
+        this.plugin.inlineButtons.register(editorBtn);
 
-        // Add tooltip
-        cleanBtn.setAttribute("aria-label", realBtn.isValid ? "Edit ObsidianFM Player" : "Missing References");
-        cleanBtn.setAttribute("data-tooltip-position", "top");
-
-        if (!this.plugin.kenkuOnline) {
-            cleanBtn.classList.add("obsidianfm-disabled");
-        }
-
-        cleanBtn.classList.toggle("error", !realBtn.isValid);
-
-        // Replace ONLY the left icon with a Lucide pencil
-        const iconEl = cleanBtn.querySelector(".obsidianfm-inline-icon") as HTMLElement;
-        if (iconEl) {
-            iconEl.empty();
-            setIcon(iconEl, "pencil");
-        }
-
-        // Replace click handler with edit modal
-        cleanBtn.onclick = (evt) => {
-            evt.preventDefault();
-            evt.stopPropagation();
-            if (!this.plugin.kenkuOnline) return;
-
-            const mdView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
-            if (!mdView) return;
-
-            const editor = mdView.editor;
-            const mode = config["soundscape"] ? "soundscape" : "normal";
-
-            const modal = mode == "normal" ? new InlinePlayerInsertModal(
-                this.plugin.app,
-                this.plugin,
-                (result) => {
-                    const newCode = Helpers.buildInlineCode(result);
-                    editor.replaceRange(
-                        newCode,
-                        editor.offsetToPos(this.from),
-                        editor.offsetToPos(this.to)
-                    );
-                },
-                () => {
-                    editor.replaceRange(
-                        "",
-                        editor.offsetToPos(this.from),
-                        editor.offsetToPos(this.to)
-                    )
-                },
-                config
-            ) : new SoundscapeInsertModal(
-                this.plugin.app,
-                this.plugin,
-                (result) => {
-                    const newCode = Helpers.buildInlineCode(result);
-                    editor.replaceRange(
-                        newCode,
-                        editor.offsetToPos(this.from),
-                        editor.offsetToPos(this.to)
-                    );
-                },
-                () => {
-                    editor.replaceRange(
-                        "",
-                        editor.offsetToPos(this.from),
-                        editor.offsetToPos(this.to)
-                    )
-                },
-                config
-            );
-
-            modal.open();
-        };
-
-        el.appendChild(cleanBtn);
+        el.appendChild(editorBtn.el);
         return el;
-    }
-
-    ignoreEvent() {
-        // Let clicks go through to our handler
-        return true;
     }
 }
 
 class ObsidianFMEditInlinePlugin {
     decorations: DecorationSet;
 
-    constructor(private view: EditorView, private plugin: ObsidianFMPlugin) {
+    constructor(
+        private view: EditorView,
+        private plugin: ObsidianFMPlugin
+    ) {
         this.decorations = this.buildDecorations();
-        this.plugin.events.on("obsidian-fm:online", () => {
-            this.decorations = this.buildDecorations();
-            this.view.update([]);
-        });
-
-        this.plugin.events.on("obsidian-fm:offline", () => {
-            this.decorations = this.buildDecorations();
-            this.view.update([]);
-        });
     }
 
     update(update: ViewUpdate) {
-        if (
-            update.docChanged ||
-            update.viewportChanged ||
-            update.selectionSet
-        ) {
+        if (update.docChanged || update.viewportChanged || update.selectionSet) {
             this.decorations = this.buildDecorations();
         }
     }
@@ -159,12 +78,18 @@ class ObsidianFMEditInlinePlugin {
             while ((match = INLINE_REGEX.exec(text)) !== null) {
                 const matchStart = from + match.index;
                 const matchEnd = matchStart + match[0].length;
-                const raw = match[0].slice(1, -1).trim(); // remove backticks
+
+                // match[1] is the content inside the backticks
+                const raw = match[1].trim();
 
                 const widget = Decoration.replace({
-                    widget: new ObsidianFMEditWidget(this.plugin, raw, matchStart, matchEnd),
-                    inclusive: false,
-                    key: this.plugin.kenkuOnline ? "online" : "offline"
+                    widget: new ObsidianFMEditWidget(
+                        this.plugin,
+                        raw,
+                        matchStart,
+                        matchEnd
+                    ),
+                    inclusive: false
                 });
 
                 builder.add(matchStart, matchEnd, widget);
@@ -183,7 +108,7 @@ export function createObsidianFMEditInlineExtension(plugin: ObsidianFMPlugin) {
             }
         },
         {
-            decorations: v => v.decorations,
+            decorations: v => v.decorations
         }
     );
 }

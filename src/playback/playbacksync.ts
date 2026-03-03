@@ -105,6 +105,19 @@ export class PlaybackSync {
       });
 
       if (!this.mapsEqual(newSoundMap, this.state.currentSounds)) {
+
+        // CLEANUP: remove preview-owned sounds that have finished
+        if (this.state.previewing && this.state.previewSoundscapeActive) {
+          for (const soundId of this.state.currentSounds.keys()) {
+            if (!newSoundMap.has(soundId)) {
+              // This sound ended naturally
+              if (this.plugin.playbackController.previewOwnedSounds.has(soundId)) {
+                this.plugin.playbackController.previewOwnedSounds.delete(soundId);
+              }
+            }
+          }
+        }
+
         this.state.currentSounds = newSoundMap;
         this.state.resetSoundBaseline(now);
         changed = true;
@@ -129,22 +142,53 @@ export class PlaybackSync {
           return;
         }
 
-        const activePreviewSfx = this.state.previewItems
-          .filter(p => p.type === "sound")
-          .filter(p => this.state.currentSounds.has(p.id));
+        //
+        // PLAYLIST CONTAINER ACTIVE?
+        //
+        const activePreviewPlaylists = this.state.previewItems
+          .filter(p => p.type === "playlist")
+          .filter(p =>
+            playback.playlist &&
+            playback.playlist.id === p.id
+          );
 
+        //
+        // SOUNDBOARD CONTAINER ACTIVE?
+        //
+        const activePreviewSoundboards = this.state.previewItems
+          .filter(p => p.type === "soundboard")
+          .filter(p => {
+            const board = this.plugin.soundboardMap.get(p.id);
+            if (!board) return false;
+            return board.sounds.some(id => this.state.currentSounds.has(id));
+          });
+
+        //
+        // TRACKS (actual media)
+        //
         const activePreviewTracks = this.state.previewItems
-          .filter(p => p.type !== "sound")
+          .filter(p => p.type === "track")
           .filter(p =>
             playback.track &&
             playback.track.id === p.id &&
             playback.track.progress < playback.track.duration
           );
 
-        // Keep only active preview items
+        //
+        // SOUNDS (actual media)
+        //
+        const activePreviewSfx = this.state.previewItems
+          .filter(p => p.type === "sound")
+          .filter(p => this.state.currentSounds.has(p.id));
+
+        //
+        // MERGE ACTIVE PREVIEW ITEMS
+        //
         this.state.previewItems = [
-          ...activePreviewSfx,
+          ...activePreviewPlaylists,
+          ...activePreviewSoundboards,
           ...activePreviewTracks,
+          ...activePreviewSfx,
         ];
 
         if (this.state.previewItems.length === 0) {

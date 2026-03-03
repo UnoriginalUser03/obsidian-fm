@@ -1,4 +1,4 @@
-import { setIcon } from "obsidian";
+import { setIcon, prepareFuzzySearch } from "obsidian";
 import type { FilteredEntry } from "src/api/types";
 import ObsidianFMPlugin from "src/main";
 import { Autocomplete } from "./autocomplete";
@@ -33,6 +33,11 @@ export class AutocompleteItem {
 
         this.el = container.createDiv({ cls: "obsidianfm-suggest-row" });
 
+        // Mark children for indentation styling
+        if (item.parentLabel) {
+            this.el.addClass("is-child");
+        }
+
         const top = this.el.createDiv({ cls: "obsidianfm-suggest-top" });
 
         if (item.icon) {
@@ -44,10 +49,22 @@ export class AutocompleteItem {
         labelEl.append(this.parent.highlight(item.label, matches));
 
         if (item.subtitle) {
-            this.el.createDiv({
-                text: item.subtitle,
+            const subtitleEl = this.el.createDiv({
                 cls: "obsidianfm-suggest-subtitle",
             });
+
+            const query = this.parent.getInputEl().value.trim();
+            if (query) {
+                const search = prepareFuzzySearch(query);
+                const r = search(item.subtitle);
+                if (r) {
+                    subtitleEl.append(this.parent.highlight(item.subtitle, r.matches));
+                } else {
+                    subtitleEl.textContent = item.subtitle;
+                }
+            } else {
+                subtitleEl.textContent = item.subtitle;
+            }
         }
 
         // Preview button

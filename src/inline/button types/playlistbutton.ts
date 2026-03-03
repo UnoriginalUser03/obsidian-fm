@@ -24,9 +24,7 @@ export class PlaylistButton extends InlineButton {
   updateState() {
     const s = this.plugin.playback;
 
-    const isCurrent = s.currentPlaylistId === this.kenkuId;
-    const isPaused = isCurrent && s.paused;
-    const isPlaying = isCurrent && !s.paused;
+    const isPlaying = this.isPlaying();
 
     // Apply disabled state (offline or invalid)
     this.applyDisabledState();
@@ -45,11 +43,10 @@ export class PlaylistButton extends InlineButton {
 
     // Playback classes
     this.el.classList.toggle("is-playing", isPlaying);
-    this.el.classList.toggle("is-paused", isPaused);
+    this.el.classList.toggle("is-paused", !isPlaying);
 
     // Icon logic
     const newIcon =
-      isPaused ? "play" :
         isPlaying ? "pause" :
           "play";
 
@@ -138,4 +135,10 @@ export class PlaylistButton extends InlineButton {
       this.plugin.connection.handleDisconnect();
     }
   }
+
+  isPlaying(): boolean {
+    const s = this.plugin.playback;
+    return s.currentPlaylistId === this.kenkuId && !s.paused;
+  }
+
 }

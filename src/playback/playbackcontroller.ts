@@ -27,10 +27,12 @@ export class PlaybackController {
     private previewSettingsSnapshot: PlaybackSettingsSnapshot | null = null;
     public randomGroupTimers: Map<string, NodeJS.Timeout[]> = new Map();
     public watchPreview: NodeJS.Timer | null = null;
+    public previewOwnedSounds = new Set<string>();
 
     private additivePreviewStarted = false;
     private previewUpdateListeners: Array<() => void> = [];
     private currentSoundscapeContext: SoundscapeContext | null = null;
+
 
     constructor(private plugin: ObsidianFMPlugin) { }
 
@@ -47,6 +49,10 @@ export class PlaybackController {
 
     private updateUI() {
         this.plugin.inlineButtons.updateAll(performance.now());
+    }
+
+    private isSoundscapeOwned(id: string): boolean {
+        return this.currentSoundscapeContext?.ownedSounds.has(id) ?? false;
     }
 
     // ------------------------------------------------------------
@@ -175,21 +181,29 @@ export class PlaybackController {
     }
 
     async stopSoundEffect(id: string) {
+        // Do not stop sounds owned by an active soundscape
+        if (this.isSoundscapeOwned(id)) return;
+
         await stopSound(this.baseUrl, "sound", id);
         this.state.currentSounds.delete(id);
         this.updateUI();
     }
 
-    async stopEntireSoundboard(boardId: string) {
+    async stopSoundboard(boardId: string) {
         const board = this.plugin.soundboardMap.get(boardId);
         if (!board) return;
 
-        for (const id of board.sounds) {
-            await stopSound(this.baseUrl, "sound", id);
-            this.state.currentSounds.delete(id);
+        const s = this.state;
+
+        for (const soundId of board.sounds) {
+            // Skip soundscape-owned sounds
+            if (this.isSoundscapeOwned(soundId)) continue;
+
+            if (s.currentSounds.has(soundId)) {
+                await this.stopSoundEffect(soundId);
+            }
         }
 
-        this.state.resetSoundBaseline(performance.now());
         this.updateUI();
     }
 
@@ -214,14 +228,7 @@ export class PlaybackController {
         }
 
         // Build new context
-        const ctx: SoundscapeContext = {
-            id,
-            title: this.plugin.inlineButtons.getPlaybackButton(id)?.title ?? "Soundscape",
-            loopIds: new Set(),
-            randomIds: new Set(),
-            timerIds: new Set(),
-            ownedSounds: new Set(),
-        };
+        const ctx = this.buildSoundscapeContext(id, items);
 
         // Register loops + play them
         for (const item of items) {
@@ -269,9 +276,14 @@ export class PlaybackController {
             const delaySeconds = Math.random() * (item.max - item.min) + item.min;
             const delayMs = delaySeconds * 1000;
 
+            // Pick next sound NOW
+            const available = item.ids.filter(id => !s.currentSounds.has(id));
+            const nextSoundId = available.length > 0
+                ? available[Math.floor(Math.random() * available.length)]
+                : item.ids[Math.floor(Math.random() * item.ids.length)];
+
             const timerId = `${soundscapeId}:${item.label}:${performance.now()}`;
 
-            // Only track real soundscape timers
             if (soundscapeId !== "__preview_soundscape__") {
                 const pending: PendingTimer = {
                     id: timerId,
@@ -279,6 +291,7 @@ export class PlaybackController {
                     duration: delaySeconds,
                     startedAt: performance.now(),
                     soundscapeId,
+                    nextSoundId, // NEW
                 };
 
                 s.pendingTimers.push(pending);
@@ -292,24 +305,19 @@ export class PlaybackController {
                     ctx?.timerIds.delete(timerId);
                 }
 
-                // Pick a sound not currently playing
-                const available = item.ids.filter(id => !s.currentSounds.has(id));
-                if (available.length === 0) {
-                    scheduleNext();
-                    return;
-                }
-
-                const id = available[Math.floor(Math.random() * available.length)];
-
+                // Play the pre‑chosen sound
                 try {
-                    const alreadyPlaying = s.currentSounds.has(id);
-
+                    const alreadyPlaying = s.currentSounds.has(nextSoundId);
                     if (!alreadyPlaying) {
-                        await playSound(this.baseUrl, id, "sound");
-                        s.currentSounds.set(id, { progress: 0, duration: 0, frozen: false });
+                        await playSound(this.baseUrl, nextSoundId, "sound");
+                        s.currentSounds.set(nextSoundId, { progress: 0, duration: 0, frozen: false });
 
-                        ctx?.randomIds.add(id);
-                        ctx?.ownedSounds.add(id);
+                        ctx?.randomIds.add(nextSoundId);
+                        ctx?.ownedSounds.add(nextSoundId);
+
+                        if (soundscapeId === "__preview_soundscape__") {
+                            this.previewOwnedSounds.add(nextSoundId);
+                        }
                     }
                 } catch { }
 
@@ -447,11 +455,6 @@ export class PlaybackController {
             await playSound(this.baseUrl, snapshot.track, "track");
             s.currentTrackId = snapshot.track;
             s.currentPlaylistId = snapshot.playlistID;
-
-            if (snapshot.trackProgress != null) {
-                await seekTo(this.baseUrl, snapshot.trackProgress);
-            }
-
             restoredSomething = true;
         }
 
@@ -462,23 +465,28 @@ export class PlaybackController {
 
         s.currentSoundscapeId = snapshot.soundscapeID;
         // Restart random-group timers for restored soundscape
+        // Restore soundscape
         if (snapshot.soundscapeID) {
-            // Clear any old timers just in case
-            const oldTimers = this.randomGroupTimers.get(snapshot.soundscapeID);
-            if (oldTimers) {
-                for (const t of oldTimers) clearTimeout(t);
-                this.randomGroupTimers.delete(snapshot.soundscapeID);
-            }
+            const scId = snapshot.soundscapeID;
 
-            // Look up the soundscape definition from inline buttons
-            const sc = this.plugin.inlineButtons.getPlaybackButton(snapshot.soundscapeID) as SoundscapeButton;
-            if (sc) {
-                for (const item of sc.items) {
+            const scBtn = this.plugin.inlineButtons.getPlaybackButton(scId) as SoundscapeButton;
+            if (scBtn) {
+                const ctx = this.buildSoundscapeContext(scId, scBtn.items);
+
+                // Re-register loops
+                for (const item of scBtn.items) {
+                    if (item.type === "loop") {
+                        ctx.ownedSounds.add(item.id);
+                    }
                     if (item.type === "flavour-group") {
-                        this.startRandomGroupScheduler(snapshot.soundscapeID, item);
+                        this.startRandomGroupScheduler(scId, item, ctx);
                     }
                 }
+
+                this.currentSoundscapeContext = ctx;
             }
+
+            s.currentSoundscapeId = scId;
         }
 
         if (this.previewSettingsSnapshot) {
@@ -491,11 +499,11 @@ export class PlaybackController {
             this.previewSettingsSnapshot = null;
         }
 
-        if (snapshot.paused && restoredSomething) {
+        if (restoredSomething) {
             await new Promise((res) => setTimeout(res, 50));
-            await this.Pause();
+            if (snapshot.paused) await this.Pause();
+            if (snapshot.trackProgress != null) await seekTo(this.baseUrl, snapshot.trackProgress);
         }
-
         s.resetSoundBaseline(performance.now());
         s.resetTrackBaseline(performance.now());
         this.updateUI();
@@ -503,6 +511,13 @@ export class PlaybackController {
 
     public async stopPreviewAudioOnly() {
         const s = this.state;
+
+        for (const id of this.previewOwnedSounds) {
+            await stopSound(this.baseUrl, "sound", id);
+            s.currentSounds.delete(id);
+        }
+
+        this.previewOwnedSounds.clear();
 
         // Stop only preview items
         for (const p of s.previewItems) {
@@ -538,11 +553,13 @@ export class PlaybackController {
         const s = this.state;
         const additive = opts?.additive ?? false;
 
+        // Capture snapshot once
         if (!this.previewSnapshot) {
             this.previewSnapshot = this.captureState();
             this.additivePreviewStarted = false;
         }
 
+        // Capture playback settings once
         if (!this.previewSettingsSnapshot) {
             this.previewSettingsSnapshot = {
                 shuffle: this.state.shuffle,
@@ -552,6 +569,7 @@ export class PlaybackController {
             };
         }
 
+        // Reset preview state if not additive
         if (!additive) {
             await this.stopAll();
             s.previewItems = [];
@@ -563,11 +581,51 @@ export class PlaybackController {
             this.additivePreviewStarted = true;
         }
 
-        // Play the new preview item
+        if (type === "playlist") {
+            const playlist = this.plugin.playlists.find(p => p.id === id);
+
+            if (playlist && playlist.tracks.length > 0) {
+                const randomTrack = playlist.tracks[Math.floor(Math.random() * playlist.tracks.length)];
+
+                // Play the actual track
+                await playSound(this.baseUrl, randomTrack, "track");
+
+                // Track both the playlist and the track
+                s.previewItems.push({ id, type: "playlist" });
+                s.previewItems.push({ id: randomTrack, type: "track" });
+
+                s.previewing = true;
+                this.notifyPreviewUpdate();
+                this.startPreviewWatcher();
+                this.updateUI();
+                return;
+            }
+        }
+
+        if (type === "soundboard") {
+            const board = this.plugin.soundboardMap.get(id);
+
+            if (board && board.sounds.length > 0) {
+                const randomSound = board.sounds[Math.floor(Math.random() * board.sounds.length)];
+
+                // Play the actual sound
+                await playSound(this.baseUrl, randomSound, "sound");
+
+                // Track both the soundboard and the sound
+                s.previewItems.push({ id, type: "soundboard" });
+                s.previewItems.push({ id: randomSound, type: "sound" });
+
+                s.previewing = true;
+                this.notifyPreviewUpdate();
+                this.startPreviewWatcher();
+                this.updateUI();
+                return;
+            }
+        }
+
         await playSound(this.baseUrl, id, type);
         s.previewing = true;
 
-        // Only apply playback overrides for music (track/playlist)
         if (opts?.override && (type === "track" || type === "playlist")) {
             await setPlayback(
                 this.baseUrl,
@@ -578,16 +636,7 @@ export class PlaybackController {
             );
         }
 
-        if (type === "soundboard") {
-            const board = this.plugin.soundboardMap.get(id);
-            if (board) {
-                for (const sfxId of board.sounds) {
-                    s.previewItems.push({ id: sfxId, type: "sound" });
-                }
-            }
-        } else {
-            s.previewItems.push({ id, type });
-        }
+        s.previewItems.push({ id, type });
 
         this.notifyPreviewUpdate();
         this.startPreviewWatcher();
@@ -652,6 +701,7 @@ export class PlaybackController {
             if (item.type === "loop") {
                 await playSound(this.baseUrl, item.id, "sound");
                 s.currentSounds.set(item.id, { progress: 0, duration: 0, frozen: false });
+                this.previewOwnedSounds.add(item.id);
             }
 
             if (item.type === "flavour-group") {
@@ -669,4 +719,17 @@ export class PlaybackController {
         this.startPreviewWatcher();
         this.updateUI();
     }
+
+    private buildSoundscapeContext(id: string, items: SoundscapeItem[]): SoundscapeContext {
+        return {
+            id,
+            title: this.plugin.inlineButtons.getPlaybackButton(id)?.title ?? "Soundscape",
+            loopIds: new Set(items.filter(i => i.type === "loop").map(i => i.id)),
+            randomIds: new Set(),
+            timerIds: new Set(),
+            ownedSounds: new Set(),
+        };
+    }
+
+
 }

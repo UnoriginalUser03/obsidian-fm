@@ -75,11 +75,44 @@ export class ConnectionHandler {
         new Notice("KenkuFM Remote disconnected");
         this.plugin.events.trigger("obsidian-fm:offline");
 
-        // Reset playback state
-        const s = this.plugin.playback;
-        s.currentTrackId = null;
-        s.currentPlaylistId = null;
-        s.currentSounds.clear();
+        const playback = this.plugin.playback;
+        const controller = this.plugin.playbackController;
+
+        // ------------------------------------------------------------
+        // TIMER + SOUNDSCAPE CLEANUP (no Kenku calls)
+        // ------------------------------------------------------------
+
+        // 1. Clear UI timers
+        playback.pendingTimers = [];
+
+        // 2. Kill all random‑group timers (same pattern as onunload)
+        for (const timers of controller.randomGroupTimers.values()) {
+            for (const t of timers) clearTimeout(t);
+        }
+        controller.randomGroupTimers.clear();
+
+        // 3. Kill preview watcher
+        if (controller.watchPreview) {
+            clearInterval(controller.watchPreview);
+            controller.watchPreview = null;
+        }
+
+        // 4. Clear soundscape context so SFXPanel stops filtering sounds out
+        controller["currentSoundscapeContext"] = null;
+        playback.currentSoundscapeId = null;
+
+        // 5. Clear preview flags (prevents ghost preview state)
+        playback.previewing = false;
+        playback.previewSoundscapeActive = false;
+        playback.previewItems = [];
+
+        // ------------------------------------------------------------
+        // EXISTING RESET LOGIC (safe because no Kenku calls)
+        // ------------------------------------------------------------
+        playback.currentTrackId = null;
+        playback.currentPlaylistId = null;
+        playback.currentSounds.clear();
+        playback.pendingTimers = [];
 
         this.plugin.inlineButtons.updateAll(performance.now());
         this.startReconnectLoop();

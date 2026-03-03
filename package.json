@@ -1,6 +1,6 @@
 {
   "name": "obsidian-fm",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Control playback of sounds and music from Kenku FM.",
   "main": "main.js",
   "scripts": {

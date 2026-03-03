@@ -23,6 +23,10 @@ export class Autocomplete {
     private onKeyDown = (evt: KeyboardEvent) => this.handleKeyDown(evt);
     private onDocMouseDown = (evt: MouseEvent) => this.handleDocMouseDown(evt);
     private onBlur = () => setTimeout(() => this.close(), 150);
+    private onFocus = () => setTimeout(() => {
+        this.update(this.inputEl.value);   // populate with all items
+        this.open();       // show the popup
+    }, 150);
 
     constructor(
         app: App,
@@ -51,6 +55,7 @@ export class Autocomplete {
         this.inputEl.addEventListener("input", this.onInput);
         this.inputEl.addEventListener("keydown", this.onKeyDown);
         this.inputEl.addEventListener("blur", this.onBlur);
+        this.inputEl.addEventListener("focus", this.onFocus);
         document.addEventListener("mousedown", this.onDocMouseDown);
     }
 
@@ -96,8 +101,46 @@ export class Autocomplete {
     // ------------------------------------------------------------
     private update(query: string) {
         if (!query) {
-            this.filtered = [];
-            this.close();
+            const parents = this.items.filter(i => i.isParent);
+
+            // FLAT MODE: no parents → render all items alphabetically
+            if (parents.length === 0) {
+                this.filtered = this.items
+                    .slice()
+                    .sort((a, b) => a.label.localeCompare(b.label))
+                    .map(item => ({
+                        item,
+                        score: 0,
+                        matches: []
+                    }));
+
+                this.selectedIndex = 0;
+                this.render();
+                this.open();
+                return;
+            }
+
+            // HIERARCHICAL MODE (existing behaviour)
+            const grouped: FilteredEntry[] = [];
+
+            parents.sort((a, b) => a.label.localeCompare(b.label));
+
+            for (const parent of parents) {
+                grouped.push({ item: parent, score: 0, matches: [] });
+
+                const children = this.items
+                    .filter(i => i.parentLabel === parent.label)
+                    .sort((a, b) => a.label.localeCompare(b.label));
+
+                for (const child of children) {
+                    grouped.push({ item: child, score: 0, matches: [] });
+                }
+            }
+
+            this.filtered = grouped;
+            this.selectedIndex = 0;
+            this.render();
+            this.open();
             return;
         }
 
@@ -105,7 +148,16 @@ export class Autocomplete {
         const results: FilteredEntry[] = [];
 
         for (const item of this.items) {
-            const r = search(item.label);
+            const haystack = item.isParent
+                ? [item.label, item.subtitle, item.type].filter(Boolean).join(" ")
+                : [
+                    item.label,
+                    item.parentLabel,
+                    item.subtitle,
+                    item.type
+                ].filter(Boolean).join(" ");
+
+            const r = search(haystack);
             if (r) {
                 results.push({
                     item,
@@ -115,8 +167,36 @@ export class Autocomplete {
             }
         }
 
-        results.sort((a, b) => b.score - a.score);
-        this.filtered = results.slice(0, 50);
+        results.sort((a, b) => {
+            // 1. Higher fuzzy score first
+            if (a.score !== b.score) return b.score - a.score;
+
+            // 2. If scores equal, prefer parents
+            const aParent = a.item.isParent ? 1 : 0;
+            const bParent = b.item.isParent ? 1 : 0;
+            if (aParent !== bParent) return bParent - aParent;
+
+            // 3. Stable fallback: label
+            return a.item.label.localeCompare(b.item.label);
+        });
+        // After sort:
+        const topParent = results.find(r => r.item.isParent);
+
+        if (topParent) {
+            const parentLabel = topParent.item.label;
+
+            const children = results.filter(
+                r => r.item.parentLabel === parentLabel && !r.item.isParent
+            );
+
+            const others = results.filter(
+                r => r !== topParent && r.item.parentLabel !== parentLabel
+            );
+
+            this.filtered = [topParent, ...children, ...others].slice(0, 50);
+        } else {
+            this.filtered = results.slice(0, 50);
+        }
 
         if (this.filtered.length === 0) {
             this.close();
@@ -263,6 +343,7 @@ export class Autocomplete {
         this.inputEl.removeEventListener("input", this.onInput);
         this.inputEl.removeEventListener("keydown", this.onKeyDown);
         this.inputEl.removeEventListener("blur", this.onBlur);
+        this.inputEl.removeEventListener("focus", this.onFocus);
 
         this.popupEl.remove();
     }

@@ -23,10 +23,7 @@ export class TrackButton extends InlineButton {
   // ------------------------------------------------------------
   updateState() {
     const s = this.plugin.playback;
-
-    const isCurrent = s.currentTrackId === this.kenkuId;
-    const isPaused = isCurrent && s.paused;
-    const isPlaying = isCurrent && !s.paused;
+    const isPlaying = this.isPlaying();
 
     // Apply disabled state (offline or invalid)
     this.applyDisabledState();
@@ -45,11 +42,10 @@ export class TrackButton extends InlineButton {
 
     // Playback classes
     this.el.classList.toggle("is-playing", isPlaying);
-    this.el.classList.toggle("is-paused", isPaused);
+    this.el.classList.toggle("is-paused", !isPlaying);
 
     // Icon logic
     const newIcon =
-      isPaused ? "play" :
         isPlaying ? "pause" :
           "play";
 
@@ -145,5 +141,10 @@ export class TrackButton extends InlineButton {
     } catch {
       this.plugin.connection.handleDisconnect();
     }
+  }
+
+  isPlaying(): boolean {
+    const s = this.plugin.playback;
+    return s.currentPlaylistId === this.kenkuId && !s.paused;
   }
 }

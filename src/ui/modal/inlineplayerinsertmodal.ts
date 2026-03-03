@@ -173,36 +173,63 @@ export class InlinePlayerInsertModal extends BaseInsertModal {
     // AUTOCOMPLETE
     // ------------------------------------------------------------
     protected buildAutocompleteItems(): SuggestItem[] {
-        return [
-            ...this.plugin.music.map(t => ({
-                id: t.id,
-                label: t.title,
-                icon: "music",
-                subtitle: t.playlistName,
-                type: "track" as const
-            })),
-            ...this.plugin.sounds.map(s => ({
-                id: s.id,
-                label: s.title,
-                icon: "audio-lines",
-                subtitle: s.soundboardName,
-                type: "sound" as const
-            })),
-            ...this.plugin.playlists.map(p => ({
+        const items: SuggestItem[] = [];
+
+        // --- PLAYLISTS (parents) ---
+        for (const p of this.plugin.playlists) {
+            items.push({
                 id: p.id,
                 label: p.title,
                 icon: "list-music",
                 subtitle: "Playlist",
-                type: "playlist" as const
-            })),
-            ...this.plugin.soundboards.map(sb => ({
+                type: "playlist",
+                isParent: true,
+                childrenLabels: p.tracks
+                    .map(id => this.plugin.music.find(t => t.id === id)?.title)
+                    .filter(Boolean) as string[],
+            });
+        }
+
+        // --- TRACKS (children) ---
+        for (const t of this.plugin.music) {
+            items.push({
+                id: t.id,
+                label: t.title,
+                icon: "music",
+                subtitle: t.playlistName,
+                type: "track",
+                parentLabel: t.playlistName,
+            });
+        }
+
+        // --- SOUNDBOARDS (parents) ---
+        for (const sb of this.plugin.soundboards) {
+            items.push({
                 id: sb.id,
                 label: sb.title,
                 icon: "square-play",
                 subtitle: "Soundboard",
-                type: "soundboard" as const
-            })),
-        ];
+                type: "soundboard",
+                isParent: true,
+                childrenLabels: sb.sounds
+                    .map(id => this.plugin.sounds.find(s => s.id === id)?.title)
+                    .filter(Boolean) as string[],
+            });
+        }
+
+        // --- SOUNDS (children) ---
+        for (const s of this.plugin.sounds) {
+            items.push({
+                id: s.id,
+                label: s.title,
+                icon: "audio-lines",
+                subtitle: s.soundboardName,
+                type: "sound",
+                parentLabel: s.soundboardName,
+            });
+        }
+
+        return items;
     }
 
     protected handleAutocompleteSelect(item: SuggestItem): void {

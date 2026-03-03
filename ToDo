@@ -1,11 +1,4 @@
-+ Timer panels allow cancelling - base on button cancellation instead
-+ Unify timer panel css and regular sound panel css
++ General polish file cleanup (remove no longer needed functions, combine common functions, css, etc) - In Progress 
 + Separate and clean css file (BOHEMOTH)
-+ Overhaul sfx panel. Show based on inline buttons instead? 
-+ Disallow editing when button is playing. 
-+ Overhaul autcomplete so music always shows under playlist and sound always shows under kenku soundboard. (Clicking functionality remains the same)
-+ Idle autocomplete shows parent and children, searching flattens list.
-
-+ General polish
 
 + Sync has to do with Kenku keeping stale data. Fixed autocomplete. Syncing requires Kenku restart 

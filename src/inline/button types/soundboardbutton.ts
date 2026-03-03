@@ -137,7 +137,7 @@ export class SoundboardButton extends InlineButton {
       // NON-OVERLAPPING MODE
       if (!this.overlapping) {
         if (hasPlaying) {
-          await ctrl.stopEntireSoundboard(this.kenkuId);
+          await ctrl.stopSoundboard(this.kenkuId);
         } else {
           let soundId: string;
 
@@ -156,7 +156,7 @@ export class SoundboardButton extends InlineButton {
 
       // OVERLAPPING MODE
       if (allPlaying) {
-        await ctrl.stopEntireSoundboard(this.kenkuId);
+        await ctrl.stopSoundboard(this.kenkuId);
         return;
       }
 
@@ -176,5 +176,13 @@ export class SoundboardButton extends InlineButton {
     } catch {
       this.plugin.connection.handleDisconnect();
     }
+  }
+
+
+  isPlaying(): boolean {
+    const s = this.plugin.playback;
+    const board = this.plugin.soundboardMap.get(this.kenkuId);
+    if (!board) return false;
+    return board.sounds.some(id => s.currentSounds.has(id));
   }
 }

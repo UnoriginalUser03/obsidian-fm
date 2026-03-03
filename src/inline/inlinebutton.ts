@@ -1,13 +1,12 @@
+// core/inline/InlineButton.ts
 import { setIcon } from "obsidian";
 import ObsidianFMPlugin from "src/main";
 import { InlineButtonRegistry } from "./inlinebuttonregistry";
 
-// core/inline/InlineButton.ts
 export abstract class InlineButton {
   public el: HTMLButtonElement;
   public iconEl: HTMLDivElement;
   public isValid: boolean = true;
-  public isEditor: boolean = false;
 
   private observer: MutationObserver | null = null;
 
@@ -15,7 +14,7 @@ export abstract class InlineButton {
     protected plugin: ObsidianFMPlugin,
     public id: string,
     public title: string,
-    public type: string,
+    public type: string,   // "track", "playlist", "sound", "soundboard", "soundscape", or "editor"
   ) {
     this.el = this.createBaseElement();
     this.attachClickHandler();
@@ -53,27 +52,51 @@ export abstract class InlineButton {
 
       return true;
     }
-    this.el.classList.remove("error");
 
+    this.el.classList.remove("error");
     return false;
   }
+
   protected applyInvalidClass() {
     this.el.classList.toggle("error", !this.isValid);
   }
 
+  /** Automatically unregisters when DOM node is removed */
   public attachDomObserver(registry: InlineButtonRegistry) {
+    let removedAt: number | null = null;
+
     this.observer = new MutationObserver(() => {
-      if (!document.body.contains(this.el)) {
-        registry.unregister(this);
-        this.observer?.disconnect();
-        this.observer = null;
+      const inDom = document.body.contains(this.el);
+
+      if (inDom) {
+        removedAt = null; // reset if reinserted
+        return;
       }
+
+      // Mark the time it was first seen as removed
+      if (removedAt === null) {
+        removedAt = performance.now();
+      }
+
+      // Wait 150ms before unregistering to allow pane moves, reflows, etc.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const stillMissing = !document.body.contains(this.el);
+            const longEnough = removedAt !== null && performance.now() - removedAt > 150;
+
+            if (stillMissing && longEnough) {
+              registry.unregister(this);
+              this.observer?.disconnect();
+              this.observer = null;
+            }
+          });
+        });
+      });
     });
 
     this.observer.observe(document.body, { childList: true, subtree: true });
   }
-
-
 
   // ------------------------------------------------------------
   // DOM CREATION
@@ -82,7 +105,7 @@ export abstract class InlineButton {
     const btn = document.createElement("button");
     btn.classList.add("obsidianfm-inline-btn");
 
-    // Icon
+    // Left icon (play/pause, pencil, or warning)
     const iconEl = document.createElement("div");
     iconEl.classList.add("obsidianfm-inline-icon");
     this.iconEl = iconEl;
@@ -94,11 +117,13 @@ export abstract class InlineButton {
     titleEl.textContent = this.title;
     btn.appendChild(titleEl);
 
-    // Type icon
+    // Type icon (playback buttons use this.type; editor buttons override it)
     const typeIconEl = document.createElement("div");
     typeIconEl.classList.add("obsidianfm-inline-type-icon");
     btn.appendChild(typeIconEl);
-    setIcon(typeIconEl, this.plugin.typeIconMap[this.type] || "question-mark");
+
+    // Editor buttons override this later
+    setIcon(typeIconEl, this.plugin.typeIconMap[this.type] || "circle-question-mark");
 
     return btn;
   }
@@ -107,13 +132,15 @@ export abstract class InlineButton {
     this.el.addEventListener("click", () => this.handleClick());
   }
 
-  // Subclasses implement these:
+  // ------------------------------------------------------------
+  // ABSTRACT API
+  // ------------------------------------------------------------
   abstract updateState(): void;
   abstract updateProgress(now: number): void;
-  abstract handleClick(): Promise<void>;
+  abstract handleClick(): void;
+  abstract isPlaying(): boolean;
 
   destroy() {
     this.el.remove();
   }
-
 }

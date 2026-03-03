@@ -20,7 +20,7 @@ export class SoundButton extends InlineButton {
   // ------------------------------------------------------------
   updateState() {
     const s = this.plugin.playback;
-    const isPlaying = s.currentSounds.has(this.kenkuId);
+    const isPlaying = this.isPlaying();
 
     // Apply disabled state (offline or invalid)
     this.applyDisabledState();
@@ -119,5 +119,11 @@ export class SoundButton extends InlineButton {
     } catch {
       this.plugin.connection.handleDisconnect();
     }
+  }
+
+
+  isPlaying(): boolean {
+    const s = this.plugin.playback;
+    return s.currentSounds.has(this.kenkuId);
   }
 }

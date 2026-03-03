@@ -18,6 +18,15 @@
   z-index: 9999;
 }
 
+.obsidianfm-suggest-row.is-child .obsidianfm-suggest-top {
+  padding-left: 0.75em;
+  opacity: 0.9;
+}
+
+.obsidianfm-suggest-row.is-child .obsidianfm-suggest-subtitle {
+  margin-left: calc(28px + 0.75em);
+}
+
 .obsidianfm-suggest-row {
   padding: 6px 10px;
   cursor: pointer;
@@ -284,20 +293,6 @@ button.obsidianfm-inline-btn.is-paused .obsidianfm-inline-icon {
   display: flex;
   align-items: center;
 }
-
-.rg-row.rg-invalid {
-  color: var(--color-red);
-}
-
-.rg-row.rg-invalid .rg-row-label {
-  text-decoration: line-through;
-}
-
-.rg-row.rg-invalid {
-  background: rgba(255, 0, 0, 0.04);
-}
-
-
 
 /* ===================================================== */
 /*                  VOLUME CONTROLS                      */
@@ -688,153 +683,6 @@ button.obsidianfm-repeat-btn.is-active {
   filter: grayscale(0.8);
 }
 
-/* ------------------------------------------------------------
-   STACK ITEM WRAPPER
------------------------------------------------------------- */
-.stack-item {
-  margin-bottom: 10px;
-}
-
-/* ------------------------------------------------------------
-   HEADER ROW (folded + expanded)
------------------------------------------------------------- */
-.stack-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  /* DELETE BUTTON ALWAYS RIGHT */
-  padding: 6px 10px;
-  background: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.stack-header:hover {
-  background: var(--background-secondary-alt);
-}
-
-.stack-row-selected {
-  border-color: var(--interactive-accent);
-  background: var(--background-modifier-hover);
-}
-
-/* Left side of header: expand icon + title + (min/max when expanded) */
-.stack-header-left {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-/* Expand/collapse icon */
-.stack-fold-icon {
-  width: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Delete button */
-.stack-remove-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 4px;
-}
-
-.stack-remove-btn:hover {
-  color: var(--text-normal);
-}
-
-/* ------------------------------------------------------------
-   RANDOM GROUP TITLE INPUT (editable when expanded)
------------------------------------------------------------- */
-.rg-title-input {
-  font-size: 14px;
-  padding: 2px 4px;
-  border: 1px solid var(--background-modifier-border);
-  background: var(--background-secondary);
-  border-radius: 4px;
-  width: 150px;
-}
-
-.rg-title-input:focus {
-  outline: none;
-  border-color: var(--interactive-accent);
-  background: var(--background-primary);
-}
-
-/* ------------------------------------------------------------
-   RANDOM GROUP HEADER FIELDS (Min/Max)
------------------------------------------------------------- */
-.rg-number {
-  width: 60px;
-  padding: 2px 4px;
-  font-size: 13px;
-  border: 1px solid var(--background-modifier-border);
-  background: var(--background-secondary);
-  border-radius: 4px;
-}
-
-.rg-number:focus {
-  outline: none;
-  border-color: var(--interactive-accent);
-  background: var(--background-primary);
-}
-
-/* ------------------------------------------------------------
-   BODY ROW (SFX LIST)
------------------------------------------------------------- */
-.stack-body {
-  margin-top: 6px;
-  padding-left: 26px;
-  /* indent under expand icon */
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-/* Empty state */
-.rg-empty {
-  padding: 6px 8px;
-  font-size: 13px;
-  color: var(--text-muted);
-  font-style: italic;
-}
-
-/* Individual SFX rows */
-.rg-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--background-secondary);
-  padding: 4px 6px;
-  border-radius: 4px;
-  font-size: 13px;
-}
-
-.rg-row:hover {
-  background: var(--background-secondary-alt);
-}
-
-.rg-row-label {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.rg-remove {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.rg-remove:hover {
-  color: var(--text-normal);
-}
 
 .hidden {
   display: none;
@@ -858,17 +706,13 @@ button.is-disabled {
   opacity: 0.4;
 }
 
-.rg-timing {
-  color: var(--text-muted);
-  font-size: 12px;
-  margin-left: 4px;
-}
 
-.rg-help {
-  color: var(--text-muted);
-  font-size: 12px;
-  margin-bottom: 6px;
-}
+
+
+
+
+/* ----------------------------------------------------------*/
+
 
 /* ------------------------------------------------------------
    INLINE PLAYER OVERRIDE BLOCK
@@ -876,6 +720,7 @@ button.is-disabled {
 .obsidianfm-disabled .setting-item-control {
   filter: grayscale(1);
 }
+
 /* ===================================================== */
 /*                    SFX PLAYBACK LIST                  */
 /* ===================================================== */
@@ -1000,11 +845,13 @@ button.is-disabled {
 .soundscape-group {
   border: 1px solid var(--interactive-accent);
   border-radius: 8px;
-  padding: 8px 12px; /* match SFX group */
+  padding: 8px 12px;
+  /* match SFX group */
   background-color: var(--background-secondary);
   display: flex;
   flex-direction: column;
-  gap: 6px; /* match SFX group */
+  gap: 6px;
+  /* match SFX group */
 }
 
 /* Header: identical structure but slightly stronger presence */
@@ -1012,9 +859,11 @@ button.is-disabled {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 4px;      /* adds vertical weight */
+  padding-top: 4px;
+  /* adds vertical weight */
   padding-bottom: 4px;
-  margin-bottom: 6px;    /* space before first timer block */
+  margin-bottom: 6px;
+  /* space before first timer block */
 }
 
 /* Larger icon to match SFX header visual weight */
@@ -1032,8 +881,7 @@ button.is-disabled {
 
 /* Timer block spacing */
 .soundscape-timer-block {
-  padding: 8px 0;
-  border-top: 1px solid var(--background-modifier-border);
+  padding: 4px 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1067,13 +915,249 @@ button.is-disabled {
 
 /* Loop rows: match timer-sound spacing */
 .is-loop-item .obsidianfm-sfx-row {
-  padding-left: 20px;
   padding-top: 2px;
   padding-bottom: 2px;
 }
 
 .is-loop-item .obsidianfm-sfx-progress {
-  margin-left: 20px;
   max-width: calc(100% - 20px);
   margin-top: 4px;
+}
+
+
+/* ------------------------------------------------------------
+   RANDOM GROUP ITEM ROWS
+------------------------------------------------------------ */
+
+.rg-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--background-secondary);
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.rg-row:hover {
+  background: var(--background-secondary-alt);
+}
+
+.rg-row-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rg-row.rg-invalid {
+  color: var(--color-red);
+  background: rgba(255, 0, 0, 0.04);
+}
+
+.rg-row.rg-invalid .rg-row-label {
+  text-decoration: line-through;
+}
+
+.rg-remove {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.rg-remove:hover {
+  color: var(--text-normal);
+}
+
+.rg-empty {
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.rg-help {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* ------------------------------------------------------------
+   RANDOM GROUP HEADER FIELDS (Title + Min/Max)
+------------------------------------------------------------ */
+
+.rg-header-column {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-left: 6px;
+  /* aligns under expand icon */
+}
+
+.rg-title-input {
+  font-size: 14px;
+  padding: 2px 4px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  border-radius: 4px;
+  width: 150px;
+}
+
+.rg-title-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+  background: var(--background-primary);
+}
+
+/* Timing summary in collapsed header */
+.rg-timing {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+/* Expanded timing controls */
+.rg-timing-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 22px;
+  /* indent under title */
+  margin-top: 4px;
+}
+
+.rg-timing-row span {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+
+.rg-timing-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rg-number {
+  width: 60px;
+  padding: 4px 6px;
+  font-size: 13px;
+}
+
+.rg-number:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+  background: var(--background-primary);
+}
+
+.rg-unit {
+  padding: 4px 6px;
+  font-size: 13px;
+  border-radius: 4px;
+  background-color: var(--background-modifier-form-field);
+  border: 1px solid var(--background-modifier-border);
+}
+
+/* Random group list container */
+.rg-editor {
+  margin-top: 8px;
+}
+
+.rg-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 22px;
+  /* indent under expand icon */
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* ------------------------------------------------------------
+   STACK ITEM WRAPPER
+------------------------------------------------------------ */
+
+.stack-item {
+  margin-bottom: 10px;
+}
+
+/* ------------------------------------------------------------
+   HEADER ROW (collapsed + expanded)
+------------------------------------------------------------ */
+
+/* Default: collapsed rows are vertically centered */
+.stack-header {
+  display: flex;
+  align-items: center;
+  /* collapsed = centered */
+  justify-content: space-between;
+  padding: 8px 10px;
+  /* slightly taller to match expanded top position */
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+/* Expanded rows: pin expand + title + trash to the top */
+.stack-header.stack-expanded {
+  align-items: flex-start;
+  padding-top: 8px;
+  /* same top padding as collapsed → no drift */
+}
+
+/* Left side: collapsed = centered */
+.stack-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Expanded left side: pin expand icon to top */
+.stack-header.stack-expanded .stack-header-left {
+  align-items: flex-start;
+}
+
+.stack-header:hover {
+  background: var(--background-secondary-alt);
+}
+
+.stack-row-selected {
+  border-color: var(--interactive-accent);
+  background: var(--background-modifier-hover);
+}
+
+/* Expand/collapse icon */
+.stack-fold-icon {
+  width: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Delete button */
+.stack-remove-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.stack-remove-btn:hover {
+  color: var(--text-normal);
+}
+
+/* ------------------------------------------------------------
+   BODY ROW (SFX LIST)
+------------------------------------------------------------ */
+
+.stack-body {
+  margin-top: 6px;
+  padding-left: 26px;
+  /* indent under expand icon */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }

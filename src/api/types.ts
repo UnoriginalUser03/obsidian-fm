@@ -8,6 +8,7 @@ export interface Sound {
   id: string;
   title: string;
   soundboardName: string;
+  soundboardId: string;
   isPlaying: boolean;
   loop: boolean;
 }
@@ -93,6 +94,11 @@ export interface SuggestItem {
   icon?: string;
   subtitle?: string;
   type: MediaType;
+
+  // NEW optional fields
+  parentLabel?: string;     // if this is a child
+  childrenLabels?: string[]; // if this is a parent
+  isParent?: boolean;        // convenience flag
 }
 
 export type FilteredEntry = {
@@ -122,6 +128,7 @@ export interface PendingTimer {
   duration: number;    // total seconds until next trigger
   startedAt: number;   // performance.now() when scheduled
   soundscapeId: string; // "__preview_soundscape__" or real ID
+  nextSoundId: string;
 }
 
 export type InsertMode = "normal" | "soundscape";

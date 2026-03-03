@@ -135,5 +135,41 @@ export class Helpers {
 
         return `\u200B\`obsidianfm: ${params.join(" ")}\`\u200B`;
     }
+
+
+    static formatTimeSeconds(seconds: number, detailed: boolean = false): string {
+        seconds = Math.floor(seconds);
+
+        if (!detailed) {
+            // SIMPLE MODE (your current behaviour)
+            if (seconds < 60) {
+                return `${seconds}s`;
+            }
+
+            if (seconds < 3600) {
+                const m = Math.floor(seconds / 60);
+                return `${m}m`;
+            }
+
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+
+            if (m === 0) return `${h}h`;
+            return `${h}h ${m}m`;
+        }
+
+        // DETAILED MODE (mixed units)
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+
+        const parts: string[] = [];
+
+        if (h > 0) parts.push(`${h}h`);
+        if (m > 0) parts.push(`${m}m`);
+        if (s > 0 || parts.length === 0) parts.push(`${s}s`);
+
+        return parts.join(" ");
+    }
 }
 

@@ -1,14 +1,15 @@
 // ui/player/PlayerSFXPanel.ts
 import ObsidianFMPlugin from "src/main";
-import { stopSound } from "src/api/kenku";
 import { setIcon } from "obsidian";
 import { PlaybackState } from "src/playback/playbackstate";
 import { PendingTimer, SoundscapeContext, SoundscapeItem } from "src/api/types";
 import { SoundscapeButton } from "src/inline/button types/soundscapebutton";
+import { Helpers } from "src/helpers/helpers";
 
 export class PlayerSFXPanel {
     private container: HTMLElement;
 
+    // Groups and items are now keyed by ID, not name
     private groupEls: Record<string, HTMLElement> = {};
     private itemEls: Record<string, HTMLElement> = {};
 
@@ -36,7 +37,7 @@ export class PlayerSFXPanel {
         const ctx = controller["currentSoundscapeContext"] as SoundscapeContext | null;
 
         // ------------------------------------------------------------
-        // 1. Build soundboard groups (excluding soundscape-owned)
+        // 1. Build soundboard groups (ID-driven)
         // ------------------------------------------------------------
         const sfxByBoard: Record<string, string[]> = {};
 
@@ -46,34 +47,33 @@ export class PlayerSFXPanel {
             const sound = this.plugin.sounds.find(s => s.id === soundId);
             if (!sound) return;
 
-            const board = sound.soundboardName ?? "Ungrouped";
-            if (!sfxByBoard[board]) sfxByBoard[board] = [];
-            sfxByBoard[board].push(soundId);
+            const boardId = sound.soundboardId ?? "__ungrouped__";
+
+            if (!sfxByBoard[boardId]) sfxByBoard[boardId] = [];
+            sfxByBoard[boardId].push(soundId);
         });
 
-        Object.entries(sfxByBoard).forEach(([boardName, soundIds]) => {
-            this.ensureGroup(boardName);
-            this.updateGroup(boardName, soundIds);
+        Object.entries(sfxByBoard).forEach(([boardId, soundIds]) => {
+            this.ensureGroup(boardId);
+            this.updateGroup(boardId, soundIds);
         });
 
-        // Remove stale soundboard groups + their items
-        Object.keys(this.groupEls).forEach(boardName => {
-            if (boardName === "__soundscape__") return;
-            if (!sfxByBoard[boardName]) {
-                const groupEl = this.groupEls[boardName];
+        // Remove stale groups
+        Object.keys(this.groupEls).forEach(boardId => {
+            if (boardId === "__soundscape__") return;
+            if (!sfxByBoard[boardId]) {
+                const groupEl = this.groupEls[boardId];
 
-                // Remove any items belonging to this board
                 Object.keys(this.itemEls).forEach(id => {
                     const sound = this.plugin.sounds.find(s => s.id === id);
-                    const itemBoard = sound?.soundboardName ?? "Ungrouped";
-                    if (itemBoard === boardName) {
+                    if (sound?.soundboardId === boardId) {
                         this.itemEls[id].remove();
                         delete this.itemEls[id];
                     }
                 });
 
                 groupEl.remove();
-                delete this.groupEls[boardName];
+                delete this.groupEls[boardId];
             }
         });
 
@@ -88,7 +88,7 @@ export class PlayerSFXPanel {
         }
 
         // ------------------------------------------------------------
-        // 3. Global timers (non-soundscape)
+        // 3. Global timers
         // ------------------------------------------------------------
         const nonSoundscapeTimers = ctx
             ? state.pendingTimers.filter(t => t.soundscapeId !== ctx.id)
@@ -113,7 +113,6 @@ export class PlayerSFXPanel {
 
         const elapsed = (now - this.lastSyncTime) / 1000;
 
-        // SFX progress
         state.currentSounds.forEach((entry, soundId) => {
             const item =
                 this.itemEls[soundId] ||
@@ -129,7 +128,6 @@ export class PlayerSFXPanel {
             bar.style.width = `${percent}%`;
         });
 
-        // Timer interpolation (GLOBAL TIMERS ONLY — not timer-sound rows)
         state.pendingTimers.forEach(timer => {
             const item = this.timerItemEls[timer.id];
             if (!item) return;
@@ -153,11 +151,11 @@ export class PlayerSFXPanel {
 
         const group = this.container.createDiv({
             cls: "obsidianfm-sfx-group soundscape-group",
+            attr: { "data-board-id": "__soundscape__" }
         });
         this.soundscapeGroupEl = group;
         this.groupEls["__soundscape__"] = group;
 
-        // Use the same header styling as normal SFX groups
         const header = group.createDiv({
             cls: "obsidianfm-sfx-group-header soundscape-header",
         });
@@ -233,7 +231,6 @@ export class PlayerSFXPanel {
     ): HTMLElement {
         const block = createDiv({ cls: "soundscape-timer-block" });
 
-        // Main timer row (label + next sound)
         const row = block.createDiv({ cls: "obsidianfm-sfx-row is-timer" });
 
         const icon = row.createDiv({ cls: "obsidianfm-sfx-icon" });
@@ -246,18 +243,17 @@ export class PlayerSFXPanel {
 
         const elapsed = (performance.now() - timer.startedAt) / 1000;
         const remaining = Math.max(0, timer.duration - elapsed);
-        const nextSound = this.getNextSoundForTimer(timer, ctx, state);
+        const formatted = Helpers.formatTimeSeconds(remaining);
+        const nextSound = this.getSoundTitle(timer.nextSoundId);
 
         row.createDiv({
-            text: `Next in ${remaining.toFixed(0)}s (${nextSound})`,
+            text: `Next in ${formatted} (${nextSound})`,
             cls: "soundscape-timer-next",
         });
 
-        // --- ACTIVE SOUND ROW (behaves like normal SFX item) ---
-        const activeSoundId = this.getActiveSoundForTimer(timer, state);
+        const activeSoundIds = this.getActiveSoundsForTimer(timer, state);
 
-        if (activeSoundId) {
-            // Full-width item inside the card
+        activeSoundIds.forEach(soundId => {
             const item = block.createDiv({
                 cls: "obsidianfm-sfx-item soundscape-timer-sound",
             });
@@ -265,15 +261,14 @@ export class PlayerSFXPanel {
             const inner = item.createDiv({ cls: "obsidianfm-sfx-row" });
 
             inner.createDiv({
-                text: this.getSoundTitle(activeSoundId),
+                text: this.getSoundTitle(soundId),
                 cls: "obsidianfm-sfx-title",
             });
 
-            // Normal SFX progress bar, constrained by the card
             item.createDiv({ cls: "obsidianfm-sfx-progress" });
 
-            this.soundscapeItemEls[activeSoundId] = item;
-        }
+            this.soundscapeItemEls[soundId] = item;
+        });
 
         return block;
     }
@@ -300,61 +295,47 @@ export class PlayerSFXPanel {
         return this.plugin.sounds.find(s => s.id === id)?.title ?? id;
     }
 
-    private getNextSoundForTimer(
-        timer: PendingTimer,
-        ctx: SoundscapeContext,
-        state: PlaybackState
-    ): string {
-        const button = this.plugin.inlineButtons.getPlaybackButton(ctx.id) as SoundscapeButton;
-        if (!button) return "Unknown";
-
-        const group = button.items.find(
-            (i): i is Extract<SoundscapeItem, { type: "flavour-group" }> =>
-                i.type === "flavour-group" && i.label === timer.label
-        );
-        if (!group) return "Unknown";
-
-        const available = group.ids.filter(id => !state.currentSounds.has(id));
-        const nextId = available[0] ?? group.ids[0];
-
-        return this.getSoundTitle(nextId);
-    }
-
-    private getActiveSoundForTimer(
+    private getActiveSoundsForTimer(
         timer: PendingTimer,
         state: PlaybackState
-    ): string | null {
+    ): string[] {
         const button = this.plugin.inlineButtons.getPlaybackButton(timer.soundscapeId) as SoundscapeButton;
-        if (!button) return null;
+        if (!button) return [];
 
         const group = button.items.find(
             (i): i is Extract<SoundscapeItem, { type: "flavour-group" }> =>
                 i.type === "flavour-group" && i.label === timer.label
         );
-        if (!group) return null;
+        if (!group) return [];
 
-        return group.ids.find(id => state.currentSounds.has(id)) ?? null;
+        return group.ids.filter(id => state.currentSounds.has(id));
     }
 
     // ------------------------------------------------------------
-    // SOUNDBOARD GROUPS
+    // SOUNDBOARD GROUPS (ID-driven)
     // ------------------------------------------------------------
-    private ensureGroup(boardName: string) {
-        if (this.groupEls[boardName]) return;
+    private ensureGroup(boardId: string) {
+        if (this.groupEls[boardId]) return;
 
-        const group = this.container.createDiv({ cls: "obsidianfm-sfx-group" });
-        this.groupEls[boardName] = group;
+        const board = this.plugin.soundboardMap.get(boardId);
+        const displayName = board?.title ?? "Ungrouped";
+
+        const group = this.container.createDiv({
+            cls: "obsidianfm-sfx-group",
+            attr: { "data-board-id": boardId }
+        });
+        this.groupEls[boardId] = group;
 
         const header = group.createDiv({ cls: "obsidianfm-sfx-group-header" });
         header.createDiv({
-            text: boardName,
+            text: displayName,
             cls: "obsidianfm-sfx-group-title",
         });
 
         const stopAllBtn = header.createEl("button", {
             cls: "obsidianfm-sfx-stop-all-btn",
         });
-        stopAllBtn.title = `Stop all sounds in ${boardName}`;
+        stopAllBtn.title = `Stop all sounds in ${displayName}`;
 
         const stopAllIcon = stopAllBtn.createDiv({
             cls: "obsidianfm-sfx-stop-all-icon",
@@ -362,27 +343,24 @@ export class PlayerSFXPanel {
         setIcon(stopAllIcon, "x");
 
         stopAllBtn.addEventListener("click", () => {
-            this.stopAllInGroup(boardName);
+            this.plugin.playbackController.stopSoundboard(boardId);
         });
 
         group.createDiv({ cls: "obsidianfm-sfx-list" });
     }
 
-    private updateGroup(boardName: string, soundIds: string[]) {
-        const group = this.groupEls[boardName];
+    private updateGroup(boardId: string, soundIds: string[]) {
+        const group = this.groupEls[boardId];
         const list = group.querySelector(".obsidianfm-sfx-list") as HTMLElement;
 
-        // Remove stale items for this group (DOM + map)
         Object.keys(this.itemEls).forEach(id => {
             const sound = this.plugin.sounds.find(s => s.id === id);
-            const itemBoard = sound?.soundboardName ?? "Ungrouped";
-            if (itemBoard === boardName && !soundIds.includes(id)) {
+            if (sound?.soundboardId === boardId && !soundIds.includes(id)) {
                 this.itemEls[id].remove();
                 delete this.itemEls[id];
             }
         });
 
-        // Ensure items exist
         soundIds.forEach(soundId => {
             if (!this.itemEls[soundId]) {
                 this.itemEls[soundId] = this.createItem(list, soundId);
@@ -407,10 +385,7 @@ export class PlayerSFXPanel {
         setIcon(stopIcon, "square");
 
         stopBtn.addEventListener("click", () => {
-            stopSound(this.plugin.settings.baseUrl, "sound", soundId);
-            this.plugin.playback.currentSounds.delete(soundId);
-            this.plugin.inlineButtons.updateAll(performance.now());
-            this.update(this.plugin.playback);
+            this.plugin.playbackController.stopSoundEffect(soundId);
         });
 
         item.createDiv({ cls: "obsidianfm-sfx-progress" });
@@ -479,26 +454,6 @@ export class PlayerSFXPanel {
         item.createDiv({ cls: "obsidianfm-sfx-progress" });
 
         return item;
-    }
-
-    // ------------------------------------------------------------
-    // STOP ALL IN GROUP
-    // ------------------------------------------------------------
-    private stopAllInGroup(boardName: string) {
-        const state = this.plugin.playback;
-
-        state.currentSounds.forEach((entry, soundId) => {
-            const sound = this.plugin.sounds.find(s => s.id === soundId);
-            if (!sound) return;
-
-            if ((sound.soundboardName ?? "Ungrouped") === boardName) {
-                stopSound(this.plugin.settings.baseUrl, "sound", soundId);
-                state.currentSounds.delete(soundId);
-            }
-        });
-
-        this.plugin.inlineButtons.updateAll(performance.now());
-        this.update(state);
     }
 
     resetBaseline() {
