@@ -16,7 +16,7 @@ export class EditorInlineButton extends InlineButton {
         public from: number,
         public to: number
     ) {
-        super(plugin, id, title, "editor");
+        super(plugin, id, title, config?.type);
 
         this.iconEl.empty();
         setIcon(this.iconEl, "pencil");
@@ -97,6 +97,31 @@ export class EditorInlineButton extends InlineButton {
             );
 
         modal.open();
+    }
+
+    computeValidity(): boolean {
+        if (!this.config.type) return false;
+
+        switch (this.config.type) {
+            case "track":
+                return this.plugin.music.some(t => t.id === this.config.kenkuId);
+            case "playlist":
+                return this.plugin.playlists.some(p => p.id === this.config.kenkuId);
+            case "sound":
+                return this.plugin.soundMap.has(this.config.kenkuId);
+            case "soundboard":
+                return this.plugin.soundboardMap.has(this.config.kenkuId);
+            case "soundscape":
+                if (!this.config.soundscape) return false;
+                const items = Helpers.parseSoundscapeInline(this.plugin, this.config.soundscape);
+                return items.every(item => {
+                    if (item.type === "loop") return this.plugin.soundMap.has(item.id);
+                    if (item.type === "flavour-group") return item.ids.every(id => this.plugin.soundMap.has(id));
+                    return false;
+                });
+            default:
+                return false;
+        }
     }
 
     // ------------------------------------------------------------

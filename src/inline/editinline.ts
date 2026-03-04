@@ -82,10 +82,33 @@ class ObsidianFMEditInlinePlugin {
 
             INLINE_REGEX.lastIndex = 0;
             while ((match = INLINE_REGEX.exec(text)) !== null) {
-                const matchStart = from + match.index;
-                const matchEnd = matchStart + match[0].length;
+                const fullStart = from + match.index;
+                const fullEnd = fullStart + match[0].length;
 
-                // match[1] is the content inside the backticks
+                let matchStart = fullStart;
+                let matchEnd = fullEnd;
+
+                // Trim leading ZWSP from range
+                if (doc.sliceString(matchStart, matchStart + 1) === "\u200B") {
+                    matchStart++;
+                }
+
+                // Trim trailing ZWSP from range
+                if (doc.sliceString(matchEnd - 1, matchEnd) === "\u200B") {
+                    matchEnd--;
+                }
+
+                // 1️⃣ Skip if selection overlaps
+                const selection = this.view.state.selection;
+                const overlaps = selection.ranges.some(
+                    r => r.from < matchEnd && r.to > matchStart
+                );
+                if (overlaps) continue;
+
+                // 2️⃣ Skip if document range contains newline
+                const docSlice = doc.sliceString(matchStart, matchEnd);
+                if (docSlice.includes("\n")) continue;
+
                 const raw = match[1].trim();
 
                 const widget = Decoration.replace({

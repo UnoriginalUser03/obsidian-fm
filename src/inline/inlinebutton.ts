@@ -102,6 +102,7 @@ export abstract class InlineButton {
   abstract updateProgress(now: number): void;
   abstract handleClick(): void;
   abstract isPlaying(): boolean;
+  abstract computeValidity(): boolean;
 
   destroy() {
     this.el.remove();

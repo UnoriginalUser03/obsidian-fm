@@ -79,42 +79,20 @@ export class InlineButtonRegistry {
   // ------------------------------------------------------------
   register(btn: InlineButton | EditorInlineButton) {
     if (btn instanceof EditorInlineButton) {
-      // Many editor widgets per ID
       if (!this.editorButtons.has(btn.id)) {
         this.editorButtons.set(btn.id, new Set());
       }
       this.editorButtons.get(btn.id)!.add(btn);
 
-      // Mirror validity from playback buttons (if any exist)
-      const playbackSet = this.playerButtons.get(btn.id);
-      if (playbackSet && playbackSet.size > 0) {
-        const first = playbackSet.values().next().value;
-        btn.isValid = first.isValid;
-      }
-
+      btn.isValid = btn.computeValidity();
       btn.updateState();
-    }
-
-    else {
-      // Many playback buttons per ID
+    } else {
       if (!this.playerButtons.has(btn.id)) {
         this.playerButtons.set(btn.id, new Set());
       }
-      const set = this.playerButtons.get(btn.id)!;
-      set.add(btn);
+      this.playerButtons.get(btn.id)!.add(btn);
 
-      // Validate this playback button
-      btn.isValid = this.validateButton(btn);
-
-      // Push validity to all editor buttons
-      const editors = this.editorButtons.get(btn.id);
-      if (editors) {
-        for (const ed of editors) {
-          ed.isValid = btn.isValid;
-          ed.updateState();
-        }
-      }
-
+      btn.isValid = btn.computeValidity();
       btn.updateState();
       btn.updateProgress(performance.now());
     }
@@ -151,63 +129,19 @@ export class InlineButtonRegistry {
   // VALIDATION
   // ------------------------------------------------------------
   refreshValidity() {
-    // Validate ALL playback button instances
     for (const set of this.playerButtons.values()) {
       for (const btn of set) {
-        btn.isValid = this.validateButton(btn);
+        btn.isValid = btn.computeValidity();
       }
     }
 
-    // Editor buttons mirror playback validity
-    for (const [id, editors] of this.editorButtons.entries()) {
-      const playbackSet = this.playerButtons.get(id);
-
-      // If no playback buttons exist yet, treat as valid (neutral)
-      let valid = true;
-
-      if (playbackSet && playbackSet.size > 0) {
-        // Use the first playback instance as the source of truth
-        const first = playbackSet.values().next().value;
-        valid = first.isValid;
-      }
-
-      for (const ed of editors) {
-        ed.isValid = valid;
-        ed.updateState();
+    for (const set of this.editorButtons.values()) {
+      for (const btn of set) {
+        btn.isValid = btn.computeValidity();
       }
     }
 
     this.updateAll(performance.now());
-  }
-
-  private validateButton(btn: InlineButton): boolean {
-    // Editor buttons never validate themselves
-    if (btn.type === "editor") return true;
-
-    switch (btn.type) {
-      case "track":
-        return this.plugin.music.some(t => t.id === (btn as TrackButton).kenkuId);
-
-      case "playlist":
-        return this.plugin.playlists.some(p => p.id === (btn as PlaylistButton).kenkuId);
-
-      case "sound":
-        return this.plugin.soundMap.has((btn as SoundButton).kenkuId);
-
-      case "soundboard":
-        return this.plugin.soundboardMap.has((btn as SoundboardButton).kenkuId);
-
-      case "soundscape":
-        const sc = btn as SoundscapeButton;
-        return sc.items.every(item => {
-          if (item.type === "loop") return this.plugin.soundMap.has(item.id);
-          if (item.type === "flavour-group") return item.ids.every(id => this.plugin.soundMap.has(id));
-          return false;
-        });
-
-      default:
-        return false;
-    }
   }
 
   // ------------------------------------------------------------

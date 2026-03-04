@@ -200,4 +200,12 @@ export class SoundscapeButton extends InlineButton {
 
     return isSelected && (hasLoopPlaying || hasRandomPlaying);
   }
+
+  computeValidity(): boolean {
+    return this.items.every(item => {
+      if (item.type === "loop") return this.plugin.soundMap.has(item.id);
+      if (item.type === "flavour-group") return item.ids.every(id => this.plugin.soundMap.has(id));
+      return false;
+    });
+  }
 }

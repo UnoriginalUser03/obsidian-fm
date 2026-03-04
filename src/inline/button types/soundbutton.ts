@@ -126,4 +126,8 @@ export class SoundButton extends InlineButton {
     const s = this.plugin.playback;
     return s.currentSounds.has(this.kenkuId);
   }
+
+  computeValidity(): boolean {
+    return this.plugin.soundMap.has(this.kenkuId);
+  }
 }

@@ -185,4 +185,8 @@ export class SoundboardButton extends InlineButton {
     if (!board) return false;
     return board.sounds.some(id => s.currentSounds.has(id));
   }
+
+  computeValidity(): boolean {
+    return this.plugin.soundboardMap.has(this.kenkuId);
+  }
 }

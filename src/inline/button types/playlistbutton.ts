@@ -139,4 +139,8 @@ export class PlaylistButton extends InlineButton {
     const s = this.plugin.playback;
     return s.currentPlaylistId === this.kenkuId && !s.paused;
   }
+
+  computeValidity(): boolean {
+    return this.plugin.playlists.some(p => p.id === this.kenkuId);
+  }
 }
